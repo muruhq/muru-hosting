@@ -58,10 +58,16 @@ for a proof of concept that uses Muru rather than being it.
 - When the work shows Muru lacks something muru-hosting needs, open an
   issue in [muruhq/muru](https://github.com/muruhq/muru/issues) in the
   same step, with the use case from here, and link it from the
-  muru-hosting issue that needs it. The workaround here carries a comment
-  naming the Muru issue, so it is found and removed when the issue
-  closes. Section 11 of the specification lists what the design needs
-  from Muru; keep it current.
+  muru-hosting issue that needs it. Section 11 of the specification lists
+  what the design needs from Muru; keep it current.
+
+- A workaround is never recorded in a code comment alone. In the same
+  step as the upstream issue, open an issue in this repository with the
+  `workaround` label, saying which upstream issue it waits on, where the
+  workaround is and what to change when the upstream issue closes, and
+  put it on the project board. The comment beside the code names both
+  issues. This holds for any upstream project, not only Muru: wrapture,
+  unwrapt, Django and the rest.
 
 - A bug in Muru found here is an issue in muruhq/muru, with the smallest
   reproduction that does not need muru-hosting.

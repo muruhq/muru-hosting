@@ -32,7 +32,10 @@ Muru closes it.
 
 ## 11.2 Gaps found so far
 
-Each is filed in Muru's tracker when the work reaches it.
+Each is filed in Muru's tracker when the work reaches it. Each one that
+the code works around also has an issue in this repository with the
+`workaround` label, which says where the workaround is and what to change
+once Muru closes the gap.
 
 1. **Deploying from an uploaded archive through the admin API.** `Deploy`
    takes a directory on the node, so a remote caller has no way to give a

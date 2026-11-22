@@ -57,7 +57,7 @@ entrypoint = "hub.wsgi:application"
 # The import report records what each import cost as the hub loads, for
 # `muructl debug imports`. Like tracing below, it is wanted for development
 # runs alone, and is here for every mode only because the run table cannot
-# carry it (muruhq/muru#860). It adds to every load, a reload included.
+# carry it (muruhq/muru#860; #30 here). It adds to every load, a reload included.
 import_report = true
 
 # Deferred imports, through unwrapt: a module names the imports to defer in
@@ -68,7 +68,7 @@ lazy_imports = true
 
 # Tracing is wanted for every development run, where the debug toolbar shows
 # each request's tree and queries, and elsewhere only where something
-# receives the traces. The run table cannot say that (muruhq/muru#860), so
+# receives the traces. The run table cannot say that (muruhq/muru#860; #30 here), so
 # it is on here, for every mode; move it to [tool.muru.run] when it can.
 
 [tool.muru.tracing]

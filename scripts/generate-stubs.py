@@ -2,7 +2,7 @@
 
 The admin API's `.proto` file is fetched from Muru's repository at the tag
 of the `muructl` release pinned in pyproject.toml, since the published
-packages do not carry it (muruhq/muru#858). It is kept in the stubs
+packages do not carry it (muruhq/muru#858; #28 here). It is kept in the stubs
 package beside the generated code, so that an upgrade of Muru shows what
 changed in the API.
 

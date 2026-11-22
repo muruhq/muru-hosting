@@ -200,7 +200,7 @@ class HelperClient:
         # Each release takes its settings from its own source and from the
         # hub alone. Without `fresh`, Muru fills what they leave out from
         # the release before, which for a site's first deploy is the hello
-        # site, its static directory included (muruhq/muru#861).
+        # site, its static directory included (muruhq/muru#861; #31 here).
 
         return admin_pb2.DeployRequest(
             app=APP,

@@ -80,7 +80,7 @@ class Deploy(models.Model):
     """One deploy of a source to a site, and the Muru release it made.
 
     Muru's releases carry no commit or other word of where their code came
-    from (muruhq/muru#866), so the hub keeps that here. A deploy
+    from (muruhq/muru#866; #36 here), so the hub keeps that here. A deploy
     also records how far its job has got, so that a job run again goes on
     from there.
     """

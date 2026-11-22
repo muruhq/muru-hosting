@@ -36,7 +36,7 @@ worker:
 
 # This runs manage.py itself, not the declared command (`muructl command run
 # migrate`), which on its own uses another data directory than the run:
-# muruhq/muru#859.
+# muruhq/muru#859; #29 here.
 #
 # Apply the hub's database migrations to the development database
 migrate:

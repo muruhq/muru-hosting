@@ -16,7 +16,7 @@ def register(server: Any) -> None:
 
     There is no health service here: Muru's edge answers `grpc.health.v1`
     for a release itself, and a release cannot add to its answer
-    (muruhq/muru#864). The hub asks the proxied `GetStatus` instead, which
+    (muruhq/muru#864; #34 here). The hub asks the proxied `GetStatus` instead, which
     answers only while the admin socket does.
     """
 

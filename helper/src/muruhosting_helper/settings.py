@@ -3,7 +3,7 @@
 A site pod and a site on a laptop give the helper the same things: where
 the daemon's admin socket is, where the site's directory is, and the token
 the hub presents (specification sections 3.1 and 15.3). Nothing tells a
-process beside a daemon where its admin socket is (muruhq/muru#867), so it
+process beside a daemon where its admin socket is (muruhq/muru#867; #37 here), so it
 is a setting.
 """
 

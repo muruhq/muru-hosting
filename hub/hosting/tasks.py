@@ -63,7 +63,7 @@ def _deploy(deploy: Deploy, helper: HelperClient) -> None:
     # first release: the data directory on the site's own directory, where
     # it outlives the daemon's state (specification section 3.2). It is
     # applied here because the daemon's own file does not take it
-    # (muruhq/muru#862).
+    # (muruhq/muru#862; #32 here).
 
     site = deploy.site
 

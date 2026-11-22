@@ -3,7 +3,7 @@
 Specification section 4.3. Muru's `Deploy` takes a directory the daemon
 reads, so the hub uploads an archive here and deploys the directory it is
 unpacked into. The service is removed when Muru can take a release's code
-through its own API (muruhq/muru#865).
+through its own API (muruhq/muru#865; #35 here).
 """
 
 from __future__ import annotations

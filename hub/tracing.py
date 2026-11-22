@@ -13,7 +13,7 @@ def observed[**P, R](**options: Any) -> Callable[[Callable[P, R]], Callable[P, R
 
     This is `wrapture.observed` with its options. wrapture's own annotation
     gives a decorated method a signature that takes no arguments
-    (GrahamDumpleton/wrapture#6), so the hub's code is marked through
+    (GrahamDumpleton/wrapture#6; #27 here), so the hub's code is marked through
     this instead.
     """
 

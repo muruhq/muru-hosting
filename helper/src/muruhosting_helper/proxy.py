@@ -32,7 +32,7 @@ class AdminProxy:
 
         if self._channel is None:
             # The authority a Unix socket's address gives is one the daemon
-            # refuses (muruhq/muru#863), so name a plain one. Messages are
+            # refuses (muruhq/muru#863; #33 here), so name a plain one. Messages are
             # not limited in size here: the daemon's own limits are the ones
             # that count.
 
