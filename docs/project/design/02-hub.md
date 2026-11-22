@@ -23,12 +23,30 @@ serve` from an image built with `muructl build --deployment`.
   handoff), which serves it as Server-Sent Events or a WebSocket, so a
   long stream holds no WSGI thread.
 
-- Until those streams are built, a site's page keeps itself current by
-  asking the hub again for the part that changes (its state, releases,
-  deploys, log, events and activity): every two seconds while a deploy
-  is under way and every ten otherwise, and not while the page is hidden
-  or the person is selecting text or has the keyboard in that part. Each
-  refresh is a handful of calls to the site's helper.
+- A site's page opens one stream, Server-Sent Events from
+  `sites/OWNER/NAME/stream/`. The view checks that the person may see the
+  site, puts the site's helper address and token in the ASGI scope's
+  state and hands the request on; the ASGI application follows
+  `TailLogs` and `WatchEvents` with gRPC's asyncio client and sends each
+  log line and event as it comes, the last hundred lines and thirty
+  events first. The log is followed afresh when traffic moves to another
+  release. A run of a command has a stream of its own, of
+  `TailCommandRun`, which ends when the run does.
+
+- The rest of a site's page (its state, releases, rollout, deploys,
+  commands, runs and activity) is the hub's own rendering, and the page
+  asks the hub for that part again whenever the stream carries a new
+  event, and every two seconds while a deploy is under way, since a
+  deploy's early steps are the hub's and make no event at the site. It
+  does not ask while the page is hidden or the person is selecting text
+  or has the keyboard in that part.
+
+- Where the hub is not served by Muru, as under Django's test client,
+  the stream's view answers 501. The page then shows the log and events
+  it was loaded with and asks for the rest every ten seconds.
+
+- Forms a person types into (a canary's steps, a command's inputs) are
+  pages of their own, so that nothing typed is lost to a refresh.
 
 - An action is a form posted to a view that takes it through the service
   layer (section 10.1) and shows the page again with what came of it.

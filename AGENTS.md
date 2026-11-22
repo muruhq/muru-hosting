@@ -298,6 +298,7 @@ about this project belong in this file, not in that skill.
 | `hub/` | The hub's Django project: `accounts/` for who signs in, `hosting/` for sites, with `manage.py` and its `[tool.muru]` settings at the root |
 | `helper/` | The site helper, a gRPC service Muru serves beside each site's daemon: the allowlisted proxy of `muru.admin.v1` and the Sources service |
 | `hello/` | The hello site, the project every new site is given as its first release |
+| `examples/` | A Flask and a FastAPI project to deploy to a site while working on the hub, each a project of its own |
 | `packages/stubs/` | The gRPC stubs the hub and the helper share: `admin.proto` of the pinned Muru release, the helper's own `.proto`, and the code `just stubs` generates from them |
 | `deploy/site/` | The configuration of a site's Muru daemon, for a pod and for a site on a laptop |
 | `tests/` | The tests of the hub and the helper, some against a real daemon |

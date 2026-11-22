@@ -55,6 +55,11 @@ docs = [
 [tool.muru]
 entrypoint = "hub.wsgi:application"
 
+# A view may hand its request to an ASGI application on the worker's event
+# loop, which is how a site's page is streamed its log and events without
+# holding a thread (specification section 2.1).
+handoff = "asgi"
+
 # The import report records what each import cost as the hub loads, for
 # `muructl debug imports`. Like tracing below, it is wanted for development
 # runs alone, and is here for every mode only because the run table cannot

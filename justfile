@@ -30,14 +30,16 @@ test *args:
 hub *args: migrate
     {{dev}} uv run muructl run {{args}}
 
-# The worker restarts itself when the hub's code changes, as its own child
-# process, so stopping takes the whole process group down, not the one pid.
+# The worker is stopped when the hub stops, however that comes about. It is
+# sent the signal itself, not its process group, so that a caller of this
+# recipe is left alone.
 #
 # Run the hub and its jobs worker together, stopping both with Ctrl-C; arguments go to muructl run, as in `just dev --open`
 dev *args: migrate
     #!/usr/bin/env sh
-    trap 'trap - TERM; kill 0' EXIT INT TERM
     {{dev}} uv run python manage.py db_worker &
+    worker=$!
+    trap 'kill $worker 2>/dev/null' EXIT
     {{dev}} uv run muructl run {{args}}
 
 # Run the hub's jobs worker beside `just hub`

@@ -24,7 +24,7 @@ from hub.accounts.models import User
 from hub.hosting import tasks
 from hub.hosting.archives import Archive, archive_directory
 from hub.hosting.helper import HelperClient, HelperError
-from hub.hosting.models import AuditEntry, Deploy, Site
+from hub.hosting.models import APP, AuditEntry, Deploy, Site
 from hub.tracing import observed
 
 
@@ -125,8 +125,13 @@ def redeploy_hello(site: Site, actor: User | None = None) -> Deploy:
 
 
 @observed(label="sites.deploy_directory", capture="none")
-def deploy_directory(site: Site, directory: Path, actor: User | None = None) -> Deploy:
+def deploy_directory(
+    site: Site, directory: Path, actor: User | None = None, hold: bool = False
+) -> Deploy:
     """Deploy a directory on the hub's machine to a site.
+
+    With `hold` the release is started and traffic is left where it is, for
+    a canary or for someone to serve it when they choose.
 
     A person may ask for this only where the hub holds its own accounts, on
     a developer's machine: anywhere else it would hand them every directory
@@ -149,8 +154,9 @@ def deploy_directory(site: Site, directory: Path, actor: User | None = None) -> 
         archive,
         prefix=archive.commit[:12] or "local",
         description=f"From {directory}",
+        hold=hold,
     )
-    _record(site, actor, "deploy", f"From {directory}", "Queued.")
+    _record(site, actor, "deploy", f"From {directory}", "Queued, held." if hold else "Queued.")
 
     return deploy
 
@@ -162,6 +168,7 @@ def start_deploy(
     prefix: str,
     description: str,
     env: dict[str, str] | None = None,
+    hold: bool = False,
 ) -> Deploy:
     """Keep a source archive, record a deploy of it and queue the job that carries it out."""
 
@@ -186,6 +193,7 @@ def start_deploy(
         commit=archive.commit,
         description=description,
         env=env or {},
+        hold=hold,
         trace_headers=dict(wrapture.trace_headers()),
     )
 
@@ -345,6 +353,216 @@ def set_maintenance(site: Site, on: bool, actor: User | None = None) -> str:
     return _operate(site, actor, "maintenance", "on" if on else "off", call)
 
 
+# What a canary's steps may be, and how long each may hold.
+
+MAX_STEPS = 10
+MIN_HOLD_SECONDS, MAX_HOLD_SECONDS = 5, 3600
+
+ROLLOUT_ACTIONS = {
+    "pause": "The rollout is paused at {percent}%.",
+    "resume": "The rollout goes on from {percent}%.",
+    "promote": "The rollout is promoted: release {candidate} takes all the traffic.",
+    "abort": "The rollout is aborted: release {candidate} is out of traffic.",
+}
+
+
+def parse_steps(text: str) -> list[int]:
+    """Read a canary's steps, as percentages that rise, or refuse with why not."""
+
+    try:
+        steps = [int(part) for part in text.replace(" ", "").split(",") if part]
+    except ValueError:
+        raise ActionRefused("Give the steps as percentages, such as 10,50.") from None
+
+    if not steps or len(steps) > MAX_STEPS:
+        raise ActionRefused(f"Give between 1 and {MAX_STEPS} steps.")
+
+    if any(not 1 <= step <= 100 for step in steps) or steps != sorted(set(steps)):
+        raise ActionRefused("Each step is a percentage from 1 to 100, larger than the one before.")
+
+    return steps
+
+
+@observed(label="sites.start_rollout")
+def start_rollout(
+    site: Site,
+    release: str,
+    steps: str,
+    hold_seconds: int,
+    min_requests: int,
+    actor: User | None = None,
+) -> str:
+    """Start a canary: a held release takes a rising share of a site's requests, step by step."""
+
+    shares = parse_steps(steps)
+
+    if not MIN_HOLD_SECONDS <= hold_seconds <= MAX_HOLD_SECONDS:
+        raise ActionRefused(
+            f"Each step holds for between {MIN_HOLD_SECONDS} and {MAX_HOLD_SECONDS} seconds."
+        )
+
+    if not 1 <= min_requests <= 100_000:
+        raise ActionRefused("Give how many requests a step needs before it is judged.")
+
+    def call(helper: HelperClient) -> str:
+        rollout = helper.start_rollout(release, shares, hold_seconds, min_requests)
+
+        return (
+            f"A canary of release {rollout.candidate} has started against {rollout.baseline}, "
+            f"at {shares[0]}%."
+        )
+
+    detail = f"{release}: {','.join(map(str, shares))}% for {hold_seconds}s"
+
+    return _operate(site, actor, "rollout-start", detail, call)
+
+
+@observed(label="sites.control_rollout")
+def control_rollout(site: Site, action: str, actor: User | None = None) -> str:
+    """Pause, resume, promote or abort a site's rollout."""
+
+    if action not in ROLLOUT_ACTIONS:
+        raise ActionRefused(f"A rollout cannot be asked to {action}.")
+
+    def call(helper: HelperClient) -> str:
+        rollout = helper.control_rollout(action)
+
+        return ROLLOUT_ACTIONS[action].format(percent=rollout.percent, candidate=rollout.candidate)
+
+    return _operate(site, actor, f"rollout-{action}", "", call)
+
+
+@observed(label="sites.run_command", capture="none")
+def run_command(site: Site, name: str, inputs: dict[str, str], actor: User | None = None) -> int:
+    """Run one of the commands a site's serving release declares, and return the run's id.
+
+    Only a declared command is run, with its declared inputs alone. The
+    audit entry names the inputs given and shows the values of those that
+    are not secret.
+    """
+
+    ran = 0
+
+    def call(helper: HelperClient) -> str:
+        nonlocal ran
+
+        declared = {command.name: command for command in helper.commands()}
+
+        if name not in declared:
+            raise ActionRefused(f"The serving release declares no command {name}.")
+
+        known = {item.name: item for item in declared[name].inputs}
+        unknown = sorted(set(inputs) - set(known))
+
+        if unknown:
+            raise ActionRefused(f"{name} takes no input {unknown[0]}.")
+
+        missing = [
+            item.name for item in known.values() if item.required and not inputs.get(item.name)
+        ]
+
+        if missing:
+            raise ActionRefused(f"{name} needs a value for {missing[0]}.")
+
+        # An input left empty takes the command's own default.
+
+        given = {key: value for key, value in inputs.items() if value}
+        ran = helper.run_command(name, given)
+
+        return f"Started as run {ran}."
+
+    secret = _secret_inputs(site, name)
+    shown = ", ".join(
+        f"{key}={'***' if key in secret else value}"
+        for key, value in sorted(inputs.items())
+        if value
+    )
+
+    _operate(site, actor, "command-run", f"{name} {shown}".strip(), call)
+
+    return ran
+
+
+def _secret_inputs(site: Site, name: str) -> set[str]:
+    """Name the inputs of a command whose values are never shown or recorded.
+
+    When the daemon cannot say, every input is treated as secret.
+    """
+
+    try:
+        with HelperClient(site.helper_address, site.helper_token) as helper:
+            commands = helper.commands()
+    except HelperError:
+        return _Everything()
+
+    return {
+        item.name
+        for command in commands
+        if command.name == name
+        for item in command.inputs
+        if item.secret
+    }
+
+
+class _Everything(set[str]):
+    """A set that every name is in."""
+
+    def __contains__(self, name: object) -> bool:
+        return True
+
+
+@observed(label="sites.stop_command_run")
+def stop_command_run(site: Site, run: int, actor: User | None = None) -> str:
+    """Stop a run of a site's command that is under way."""
+
+    def call(helper: HelperClient) -> str:
+        record = helper.command_run(run)
+
+        if record is None or record.app != APP:
+            raise ActionRefused(f"The site has no run {run}.")
+
+        helper.stop_command_run(run)
+
+        return f"Run {run} of {record.name} is being stopped."
+
+    return _operate(site, actor, "command-stop", str(run), call)
+
+
+@dataclass(frozen=True)
+class CommandRun:
+    """One run of a site's command, with the end of what it wrote."""
+
+    record: admin_pb2.CommandRunRecord
+    output: list[str]
+
+
+# How much of a run's output its page is loaded with.
+
+RUN_LINES_SHOWN = 500
+
+
+@observed(label="sites.command_run")
+def command_run(site: Site, run: int) -> CommandRun | None:
+    """Find a run of one of a site's commands, or None when the site has no such run."""
+
+    if not site.helper_address:
+        return None
+
+    try:
+        with HelperClient(site.helper_address, site.helper_token) as helper:
+            record = helper.command_run(run)
+
+            # A run's id is the daemon's, so make sure it is this site's
+            # application's before showing it.
+
+            if record is None or record.app != APP:
+                return None
+
+            return CommandRun(record=record, output=helper.command_output(run, RUN_LINES_SHOWN))
+    except HelperError as error:
+        raise ActionRefused(str(error)) from error
+
+
 @dataclass(frozen=True)
 class LiveSite:
     """What a site's daemon says of it now, or why it could not be asked."""
@@ -357,17 +575,21 @@ class LiveSite:
     maintenance: bool = False
     events: list[admin_pb2.Event] = field(default_factory=list)
     log: list[str] = field(default_factory=list)
+    rollout: admin_pb2.Rollout | None = None
+    commands: list[admin_pb2.CommandInfo] = field(default_factory=list)
+    command_runs: list[admin_pb2.CommandRunRecord] = field(default_factory=list)
 
 
-# How much of a site's events and log its page shows.
+# How much of a site's events, log and command runs its page shows.
 
 EVENTS_SHOWN = 30
 LOG_LINES_SHOWN = 100
+RUNS_SHOWN = 10
 
 
 @observed(label="sites.live")
-def live_site(site: Site) -> LiveSite:
-    """Ask a site's daemon for its releases, newest first, its events and its log."""
+def live_site(site: Site, feed: bool = True) -> LiveSite:
+    """Ask a site's daemon for its releases, newest first, and with `feed` its events and log."""
 
     if not site.helper_address:
         return LiveSite(releases=[], error="The site has no helper to ask.")
@@ -377,8 +599,12 @@ def live_site(site: Site) -> LiveSite:
             status = helper.status()
             releases = helper.releases()
             app = helper.app()
-            events = helper.events(EVENTS_SHOWN)
-            log = helper.log(LOG_LINES_SHOWN) if app is not None and app.current_release else []
+            serving = app is not None and bool(app.current_release)
+            events = helper.events(EVENTS_SHOWN) if feed else []
+            log = helper.log(LOG_LINES_SHOWN) if feed and serving else []
+            rollout = helper.rollout() if app is not None else None
+            commands = helper.commands() if serving else []
+            runs = helper.command_runs()[:RUNS_SHOWN] if app is not None else []
     except HelperError as error:
         return LiveSite(releases=[], error=str(error))
 
@@ -392,4 +618,7 @@ def live_site(site: Site) -> LiveSite:
         maintenance=app.maintenance if app is not None else False,
         events=events,
         log=log,
+        rollout=rollout,
+        commands=commands,
+        command_runs=runs,
     )

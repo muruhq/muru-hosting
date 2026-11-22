@@ -68,7 +68,10 @@ archive with the hub's image.
   release: whether a repository is linked, whether the App can see it,
   and the site's page in the hub.
 
-- It includes a minimal example project to copy.
+- It includes a minimal example project to copy. Until it does, the
+  repository's `examples/` directory holds two: a Flask application and a
+  FastAPI one, each with a `[tool.muru]` table, a `uv.lock` and declared
+  commands (section 15.3.2).
 
 - It carries a small original browser game, a static file served by the
   edge from the release's static directory and opened by clicking the

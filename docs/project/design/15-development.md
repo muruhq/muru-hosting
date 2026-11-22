@@ -152,6 +152,18 @@ The stubs are generated with their modules beneath
 `muru` package in a worker. The `.proto` file of the pinned release is
 kept beside them, so an upgrade of Muru shows what changed in the API.
 
+### 15.3.2 Example projects
+
+`examples/` holds projects to deploy to a site while working on the hub:
+`flask-guestbook` (WSGI, with SQLite in the site's data directory, static
+files and three declared commands) and `fastapi-ticker` (ASGI, with a
+response that stays open and one declared command). Each is a project of
+its own with its own `uv.lock`, outside the workspace, so a site's daemon
+builds and serves it as it would anyone's code. Both have a page that
+fails and a page that is slow, for trying a canary's gates. They are
+linted with the rest of the repository but not type-checked, since their
+dependencies are not the hub's.
+
 ## 15.4 Sites in Kind
 
 The hub on a laptop manages sites in a local Kind cluster that already

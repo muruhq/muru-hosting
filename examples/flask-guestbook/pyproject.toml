@@ -1,0 +1,36 @@
+# An example to deploy to a muru-hosting site: a WSGI application with
+# data that outlives a release, static files and declared commands.
+
+[project]
+name = "flask-guestbook"
+version = "0"
+description = "A guestbook kept in SQLite, as an example WSGI application for a muru-hosting site"
+requires-python = ">=3.12"
+dependencies = ["flask>=3.1"]
+
+[tool.muru]
+entrypoint = "guestbook:app"
+
+[[tool.muru.static]]
+path = "/static/"
+dir = "static"
+
+# What someone operating the site can run with a release.
+
+[tool.muru.commands.sign]
+description = "Sign the guestbook from the command line"
+run = ["python", "-m", "guestbook", "sign", "{name}", "{message}"]
+timeout = "1m"
+inputs.name = { required = true, description = "Who is signing" }
+inputs.message = { default = "Hello from a command", description = "What they say" }
+
+[tool.muru.commands.count]
+description = "Say how many entries the guestbook has, slowly, a line at a time"
+run = ["python", "-m", "guestbook", "count"]
+timeout = "5m"
+
+[tool.muru.commands.clear]
+description = "Remove every entry from the guestbook"
+run = ["python", "-m", "guestbook", "clear"]
+timeout = "1m"
+exclusive = true

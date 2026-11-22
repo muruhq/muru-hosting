@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}{{ command.name }} · {{ site.slug }}{% endblock %}
+{% block content %}
+<p class="crumbs"><a href="{% url 'home' %}">Sites</a> / <a href="{% url 'site' site.owner.get_username site.name %}">{{ site.slug }}</a> /</p>
+<h1>Run <code>{{ command.name }}</code></h1>
+{% if command.description %}<p>{{ command.description }}</p>{% endif %}
+<dl class="facts">
+  {% if command.run %}<dt>Runs</dt><dd><code>{{ command.run|join:" " }}</code></dd>{% endif %}
+  {% if command.call %}<dt>Calls</dt><dd><code>{{ command.call }}</code></dd>{% endif %}
+  {% if command.timeout %}<dt>Stopped after</dt><dd>{{ command.timeout }}</dd>{% endif %}
+  {% if command.exclusive %}<dt>Runs</dt><dd>One at a time</dd>{% endif %}
+</dl>
+<form method="post" class="card narrow-form">
+  {% csrf_token %}
+  {% for input in command.inputs %}
+  <label for="input-{{ input.name }}">{{ input.name }}{% if input.required %} (required){% endif %}</label>
+  <input type="{% if input.secret %}password{% else %}text{% endif %}" id="input-{{ input.name }}" name="input-{{ input.name }}"{% if input.required %} required{% endif %}{% if input.pattern %} pattern="{{ input.pattern }}"{% endif %}{% if input.default and not input.secret %} placeholder="{{ input.default }}"{% endif %} autocomplete="off"{% if input.description or input.default %} aria-describedby="help-{{ input.name }}"{% endif %}>
+  {% if input.description or input.default %}<p id="help-{{ input.name }}" class="muted small">{{ input.description }}{% if input.default and not input.secret %}{% if input.description %}. {% endif %}Left empty, it is {{ input.default }}{% endif %}</p>{% endif %}
+  {% empty %}
+  <p class="muted">The command takes no inputs.</p>
+  {% endfor %}
+  <button type="submit">Run {{ command.name }}</button>
+</form>
+{% endblock %}

@@ -76,6 +76,9 @@ def helper() -> Iterator[HelperClient]:
     double.app.returns(admin_pb2.App(name="site", current_release="r1"))
     double.events.returns([])
     double.log.returns([])
+    double.rollout.returns(None)
+    double.commands.returns([])
+    double.command_runs.returns([])
 
     def make(address: str, token: str) -> HelperClient:
         return double  # type: ignore[no-any-return]

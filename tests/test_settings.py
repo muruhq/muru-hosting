@@ -10,6 +10,8 @@ from django.db import connection
 
 import hub.settings
 
+ROOT = Path(__file__).resolve().parent.parent
+
 
 def test_sqlite_is_the_database_without_a_database_url() -> None:
     if connection.vendor != "sqlite":
@@ -41,3 +43,16 @@ def test_the_stubs_are_those_of_the_pinned_muru() -> None:
     ]
 
     assert pins == [muruhosting_stubs.MURU_VERSION], "run `just stubs` after upgrading Muru"
+
+
+def test_each_example_is_a_project_a_site_can_build() -> None:
+    examples = sorted(path for path in (ROOT / "examples").iterdir() if path.is_dir())
+
+    assert [path.name for path in examples] == ["fastapi-ticker", "flask-guestbook"]
+
+    for example in examples:
+        settings = tomllib.loads((example / "pyproject.toml").read_text())["tool"]["muru"]
+
+        assert settings["entrypoint"]
+        assert settings["commands"]
+        assert (example / "uv.lock").is_file()

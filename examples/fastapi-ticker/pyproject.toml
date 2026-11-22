@@ -1,0 +1,20 @@
+# An example to deploy to a muru-hosting site: an ASGI application with a
+# response that stays open and a declared command.
+
+[project]
+name = "fastapi-ticker"
+version = "0"
+description = "A page fed by a stream of ticks, as an example ASGI application for a muru-hosting site"
+requires-python = ">=3.12"
+dependencies = ["fastapi>=0.115"]
+
+[tool.muru]
+entrypoint = "ticker:app"
+
+# What someone operating the site can run with a release.
+
+[tool.muru.commands.countdown]
+description = "Count down from a number, a line a second"
+run = ["python", "-m", "ticker", "countdown", "{from}"]
+timeout = "5m"
+inputs.from = { default = "5", pattern = "[0-9]{1,3}", description = "Where to count down from" }

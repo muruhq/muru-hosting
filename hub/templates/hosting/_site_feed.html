@@ -1,0 +1,23 @@
+<h2>Log <span id="feed-state" class="muted small" role="status"></span></h2>
+<pre id="log" class="log" tabindex="0" aria-label="The last lines of the serving release's log">{{ log }}</pre>
+<p id="log-empty" class="empty"{% if log %} hidden{% endif %}>The serving release has written nothing to its log.</p>
+
+<h2>Events</h2>
+<div class="scroll">
+<table>
+  <thead>
+    <tr><th>When</th><th>Event</th><th>About</th><th>What happened</th></tr>
+  </thead>
+  <tbody id="events">
+    {% for event in events %}
+    <tr data-sequence="{{ event.sequence }}">
+      <td class="nowrap">{{ event.time|date:"j M H:i:s" }} UTC</td>
+      <td><code>{{ event.type }}</code></td>
+      <td>{{ event.subject }}</td>
+      <td{% if event.level == "error" %} class="error"{% endif %}>{{ event.message }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+<p id="events-empty" class="empty"{% if events %} hidden{% endif %}>The site's daemon has recorded no events.</p>

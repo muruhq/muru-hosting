@@ -92,6 +92,7 @@ class Deploy(models.Model):
         UPLOADING = "uploading", "Uploading the source"
         DEPLOYING = "deploying", "Starting the release"
         SERVING = "serving", "Serving"
+        HELD = "held", "Started and held"
         FAILED = "failed", "Failed"
 
     site = models.ForeignKey(Site, on_delete=models.CASCADE, related_name="deploys")
@@ -111,6 +112,10 @@ class Deploy(models.Model):
     )
     env = models.JSONField(
         default=dict, blank=True, help_text="Environment variables the hub gives the release."
+    )
+    hold = models.BooleanField(
+        default=False,
+        help_text="Start the release and leave traffic where it is, for a preview or a canary.",
     )
     release = models.CharField(max_length=32, blank=True, help_text="The Muru release, such as r2.")
     state = models.CharField(max_length=16, choices=State.choices, default=State.QUEUED)

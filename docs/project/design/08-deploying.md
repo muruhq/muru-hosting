@@ -94,11 +94,13 @@ sequenceDiagram
 | Operation | Through |
 | --- | --- |
 | Roll back | `Rollback` to the retained release |
+| Deploy without traffic | `Deploy` with `hold`, which a deploy from a site's page can ask for; the deploy's record ends as held, not serving |
 | Promote a held release, or one kept warm | `PromoteRelease` |
+| Start a canary of a held release | `StartRollout` with its steps, each step's hold and the requests a step needs before it is judged; the other gates keep Muru's defaults |
 | Control a canary | `PauseRollout`, `ResumeRollout`, `PromoteRollout`, `AbortRollout` |
 | Restart workers | `Debug` with the `restart` operation, once for each worker of the serving release, the hub waiting for each replacement to be ready before the next, since the admin API has no rolling restart of its own (muruhq/muru#871). The wait is inside the web request for now |
 | Maintenance page | `SetMaintenance` |
-| Declared commands | `ListCommands`, `RunCommand` with `detach`, then `TailCommandRun` streamed to the browser |
+| Declared commands | `ListCommands`, `RunCommand` with `detach`, then `TailCommandRun` streamed to the browser, and `StopCommandRun`. The hub runs only a command the serving release declares, with its declared inputs, and its audit entry shows a secret input as `***`. A run is shown only when the daemon's record of it is for the site's application |
 | Logs and events | `TailLogs` and `WatchEvents` streamed; `ListEvents` for history |
 | Metrics | `GetMetrics` read by the hub for its charts, or Prometheus scraping each site |
 | Custom domains | section 9 |

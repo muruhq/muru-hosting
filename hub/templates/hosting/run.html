@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Run {{ run.run }} of {{ run.name }} · {{ site.slug }}{% endblock %}
+{% block content %}
+<p class="crumbs"><a href="{% url 'home' %}">Sites</a> / <a href="{% url 'site' site.owner.get_username site.name %}">{{ site.slug }}</a> /</p>
+<h1>Run {{ run.run }} of <code>{{ run.name }}</code> <span id="run-state" class="state {% if run.under_way %}state-warning{% elif run.ok %}state-ready{% else %}state-failed{% endif %}">{% if run.under_way %}Under way{% elif run.ok %}Succeeded{% else %}Failed{% endif %}</span></h1>
+<dl class="facts">
+  <dt>Release</dt><dd>{{ run.release }}</dd>
+  <dt>Started</dt><dd>{{ started|date:"j M Y H:i:s" }} UTC</dd>
+  {% if run.inputs %}<dt>Inputs</dt><dd>{{ run.inputs }}</dd>{% endif %}
+  {% if run.message %}<dt>Ended</dt><dd>{{ run.message }}</dd>{% endif %}
+</dl>
+{% if run.under_way and may_operate %}
+<form method="post" action="{% url 'site-run-stop' site.owner.get_username site.name run.run %}" data-confirm="Stop this run?">
+  {% csrf_token %}
+  <button type="submit" class="quiet">Stop the run</button>
+</form>
+{% endif %}
+<h2>Output</h2>
+<pre id="log" class="log" tabindex="0" aria-label="What the run has written"{% if run.under_way %} data-stream="{% url 'site-run-stream' site.owner.get_username site.name run.run %}"{% endif %}>{{ output }}</pre>
+<p id="log-empty" class="empty"{% if output %} hidden{% endif %}>The run has written nothing.</p>
+<script src="{% static 'hub/run.js' %}" defer></script>
+{% endblock %}

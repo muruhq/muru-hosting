@@ -79,6 +79,13 @@ The decorator is the hub's own `hub.tracing.observed`, which is
 `wrapture.observed` with the function's signature kept for mypy
 (GrahamDumpleton/wrapture#6).
 
+### 14.2.1 Streams
+
+The streams of section 2.1 are not traced. They call the helper with
+gRPC's asyncio client, which wrapture's `grpc` instrumentation does not
+cover, and each lasts as long as a page is open, which a span does not
+describe well. The request that opens one is traced up to its handoff.
+
 ## 14.3 Tracing the jobs worker
 
 The jobs worker is not traced yet. It is Django's `db_worker` command

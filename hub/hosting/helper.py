@@ -120,12 +120,16 @@ class HelperClient:
         return str(source.path)
 
     @observed(label="helper.plan_deploy", category="external", capture="none")
-    def plan_deploy(self, source_path: str, env: dict[str, str]) -> admin_pb2.DeployPlan:
+    def plan_deploy(
+        self, source_path: str, env: dict[str, str], hold: bool = False
+    ) -> admin_pb2.DeployPlan:
         """Ask the daemon what a deploy of a source would make, changing nothing."""
 
         try:
             plan: admin_pb2.DeployPlan = self._admin.PlanDeploy(
-                self._deploy_request(source_path, env), metadata=self._metadata, timeout=TIMEOUT
+                self._deploy_request(source_path, env, hold),
+                metadata=self._metadata,
+                timeout=TIMEOUT,
             )
         except grpc.RpcError as error:
             raise HelperError("planning the deploy", error) from error
@@ -133,10 +137,15 @@ class HelperClient:
         return plan
 
     @observed(label="helper.deploy", category="external", capture="none")
-    def deploy(self, source_path: str, env: dict[str, str], release: str) -> admin_pb2.Release:
-        """Create a release from a source, with the id given, without waiting for it."""
+    def deploy(
+        self, source_path: str, env: dict[str, str], release: str, hold: bool = False
+    ) -> admin_pb2.Release:
+        """Create a release from a source, with the id given, without waiting for it.
 
-        request = self._deploy_request(source_path, env)
+        With `hold` the release is started and traffic is left where it is.
+        """
+
+        request = self._deploy_request(source_path, env, hold)
         request.release = release
 
         try:
@@ -310,7 +319,159 @@ class HelperClient:
         except grpc.RpcError as error:
             raise HelperError("reading the site's log", error) from error
 
-    def _deploy_request(self, source_path: str, env: dict[str, str]) -> admin_pb2.DeployRequest:
+    @observed(label="helper.rollout", category="external", capture="none")
+    def rollout(self) -> admin_pb2.Rollout | None:
+        """Return the site's latest rollout, under way or ended, or None when it has had none."""
+
+        try:
+            found: admin_pb2.Rollout = self._admin.GetRollout(
+                admin_pb2.GetRolloutRequest(app=APP), metadata=self._metadata, timeout=TIMEOUT
+            )
+        except grpc.RpcError as error:
+            if error.code() == grpc.StatusCode.NOT_FOUND:
+                return None
+
+            raise HelperError("reading the site's rollout", error) from error
+
+        return found
+
+    @observed(label="helper.start_rollout", category="external", capture="none")
+    def start_rollout(
+        self, release: str, steps: list[int], hold_seconds: int, min_requests: int
+    ) -> admin_pb2.Rollout:
+        """Start a canary of a held release: each step's share of requests, each for the hold."""
+
+        try:
+            started: admin_pb2.Rollout = self._admin.StartRollout(
+                admin_pb2.StartRolloutRequest(
+                    app=APP,
+                    release=release,
+                    steps=[
+                        admin_pb2.RolloutStep(percent=percent, hold_ms=hold_seconds * 1000)
+                        for percent in steps
+                    ],
+                    min_requests=min_requests,
+                ),
+                metadata=self._metadata,
+                timeout=TIMEOUT,
+            )
+        except grpc.RpcError as error:
+            raise HelperError("starting the rollout", error) from error
+
+        return started
+
+    @observed(label="helper.control_rollout", category="external", capture="none")
+    def control_rollout(self, action: str) -> admin_pb2.Rollout:
+        """Pause, resume, promote or abort the site's rollout, and return it as it then is."""
+
+        calls = {
+            "pause": self._admin.PauseRollout,
+            "resume": self._admin.ResumeRollout,
+            "promote": self._admin.PromoteRollout,
+            "abort": self._admin.AbortRollout,
+        }
+
+        try:
+            rollout: admin_pb2.Rollout = calls[action](
+                admin_pb2.RolloutControlRequest(app=APP), metadata=self._metadata, timeout=TIMEOUT
+            )
+        except grpc.RpcError as error:
+            raise HelperError(f"asking the rollout to {action}", error) from error
+
+        return rollout
+
+    @observed(label="helper.commands", category="external", capture="none")
+    def commands(self) -> list[admin_pb2.CommandInfo]:
+        """List the commands the serving release declares."""
+
+        try:
+            response = self._admin.ListCommands(
+                admin_pb2.ListCommandsRequest(app=APP), metadata=self._metadata, timeout=TIMEOUT
+            )
+        except grpc.RpcError as error:
+            if error.code() == grpc.StatusCode.NOT_FOUND:
+                return []
+
+            raise HelperError("listing the site's commands", error) from error
+
+        return list(response.commands)
+
+    @observed(label="helper.run_command", category="external", capture="none")
+    def run_command(self, name: str, inputs: dict[str, str]) -> int:
+        """Start a declared command, detached from this call, and return its run's id."""
+
+        try:
+            output = self._admin.RunCommand(
+                admin_pb2.RunCommandRequest(app=APP, name=name, inputs=inputs, detach=True),
+                metadata=self._metadata,
+                timeout=TIMEOUT,
+            )
+            run = next((message.run for message in output if message.run), 0)
+        except grpc.RpcError as error:
+            raise HelperError(f"running {name}", error) from error
+
+        return run
+
+    @observed(label="helper.command_runs", category="external", capture="none")
+    def command_runs(self) -> list[admin_pb2.CommandRunRecord]:
+        """List the runs of the site's commands that the daemon keeps, those under way first."""
+
+        try:
+            response = self._admin.ListCommandRuns(
+                admin_pb2.ListCommandRunsRequest(app=APP), metadata=self._metadata, timeout=TIMEOUT
+            )
+        except grpc.RpcError as error:
+            raise HelperError("listing the site's command runs", error) from error
+
+        return list(response.runs)
+
+    @observed(label="helper.command_run", category="external", capture="none")
+    def command_run(self, run: int) -> admin_pb2.CommandRunRecord | None:
+        """Return one run of a command, or None when the daemon keeps none by that id."""
+
+        try:
+            record: admin_pb2.CommandRunRecord = self._admin.GetCommandRun(
+                admin_pb2.GetCommandRunRequest(run=run), metadata=self._metadata, timeout=TIMEOUT
+            )
+        except grpc.RpcError as error:
+            if error.code() == grpc.StatusCode.NOT_FOUND:
+                return None
+
+            raise HelperError("reading the command run", error) from error
+
+        return record
+
+    @observed(label="helper.command_output", category="external", capture="none")
+    def command_output(self, run: int, lines: int) -> list[str]:
+        """Return the last lines a run of a command has written, oldest first."""
+
+        try:
+            tail = self._admin.TailCommandRun(
+                admin_pb2.TailCommandRunRequest(run=run, lines=lines),
+                metadata=self._metadata,
+                timeout=TIMEOUT,
+            )
+
+            return [entry.line for entry in tail]
+        except grpc.RpcError as error:
+            raise HelperError("reading the command's output", error) from error
+
+    @observed(label="helper.stop_command_run", category="external", capture="none")
+    def stop_command_run(self, run: int) -> admin_pb2.CommandRunRecord:
+        """Stop a run that is under way, as its timeout would."""
+
+        try:
+            record: admin_pb2.CommandRunRecord = self._admin.StopCommandRun(
+                admin_pb2.StopCommandRunRequest(run=run), metadata=self._metadata, timeout=TIMEOUT
+            )
+        except grpc.RpcError as error:
+            raise HelperError("stopping the command", error) from error
+
+        return record
+
+    def _deploy_request(
+        self, source_path: str, env: dict[str, str], hold: bool = False
+    ) -> admin_pb2.DeployRequest:
         # Each release takes its settings from its own source and from the
         # hub alone. Without `fresh`, Muru fills what they leave out from
         # the release before, which for a site's first deploy is the hello
@@ -320,5 +481,6 @@ class HelperClient:
             app=APP,
             source=source_path,
             fresh=True,
+            hold=hold,
             env=[admin_pb2.EnvEntry(name=name, value=value) for name, value in sorted(env.items())],
         )

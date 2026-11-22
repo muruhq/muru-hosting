@@ -37,6 +37,31 @@
 </div>
 {% endif %}
 
+{% if rollout %}
+<h2>Rollout</h2>
+<div class="card">
+  <p><strong>Canary of release {{ rollout.candidate }}</strong> against {{ rollout.baseline }}
+  <span class="state state-{% if rollout.state == 'promoted' %}ready{% elif rollout.state == 'rolled_back' %}failed{% elif rollout.paused %}warning{% endif %}">{{ rollout.state_label }}</span></p>
+  {% if rollout.under_way %}
+  <p>Step {{ rollout.step }} of {{ rollout.steps|length }}: release {{ rollout.candidate }} takes {{ rollout.percent }}% of requests.</p>
+  <progress max="100" value="{{ rollout.percent }}" aria-label="The candidate's share of requests">{{ rollout.percent }}%</progress>
+  <p class="muted small">Steps: {% for step in rollout.steps %}{{ step }}%{% if not forloop.last %}, {% endif %}{% endfor %}. The last step passing gives the release all the traffic.</p>
+  {% endif %}
+  {% if rollout.message %}<p class="muted">{{ rollout.message }}</p>{% endif %}
+  {% if rollout.under_way and may_operate %}
+  <div class="actions">
+    {% if rollout.paused %}
+    <form method="post" action="{% url 'site-rollout' site.owner.get_username site.name 'resume' %}">{% csrf_token %}<button type="submit" class="quiet">Resume</button></form>
+    {% else %}
+    <form method="post" action="{% url 'site-rollout' site.owner.get_username site.name 'pause' %}">{% csrf_token %}<button type="submit" class="quiet">Pause</button></form>
+    {% endif %}
+    <form method="post" action="{% url 'site-rollout' site.owner.get_username site.name 'promote' %}" data-confirm="Give release {{ rollout.candidate }} all the traffic now?">{% csrf_token %}<button type="submit" class="quiet">Promote now</button></form>
+    <form method="post" action="{% url 'site-rollout' site.owner.get_username site.name 'abort' %}" data-confirm="Take release {{ rollout.candidate }} out of traffic and end the rollout?">{% csrf_token %}<button type="submit" class="quiet">Abort</button></form>
+  </div>
+  {% endif %}
+</div>
+{% endif %}
+
 <h2>Releases</h2>
 {% if live.error %}
 <p class="error" role="alert">The site's daemon could not be asked for its releases: {{ live.error }}</p>
@@ -59,7 +84,8 @@
         <form method="post" action="{% url 'site-promote' site.owner.get_username site.name release.id %}" data-confirm="Move traffic to release {{ release.id }}?">
           {% csrf_token %}
           <button type="submit" class="link">Serve this release</button>
-        </form>{% endif %}
+        </form>
+        {% if not rollout.under_way %}<a href="{% url 'site-canary' site.owner.get_username site.name release.id %}">Start a canary</a>{% endif %}{% endif %}
       </td>
       {% endif %}
     </tr>
@@ -94,35 +120,50 @@
 <p class="empty">The hub has made no deploys to this site.</p>
 {% endif %}
 
-{% if not live.error %}
-<h2>Log</h2>
-{% if log %}
-<pre class="log" tabindex="0" aria-label="The last lines of the serving release's log">{{ log }}</pre>
-{% else %}
-<p class="empty">The serving release has written nothing to its log.</p>
-{% endif %}
-
-<h2>Events</h2>
-{% if events %}
+{% if not live.error and live.current_release %}
+<h2>Commands</h2>
+{% if live.commands %}
 <div class="scroll">
 <table>
   <thead>
-    <tr><th>When</th><th>Event</th><th>About</th><th>What happened</th></tr>
+    <tr><th>Command</th><th>What it does</th><th>Last run</th>{% if may_operate %}<th><span class="visually-hidden">Actions</span></th>{% endif %}</tr>
   </thead>
   <tbody>
-    {% for event in events %}
+    {% for command in live.commands %}
     <tr>
-      <td class="nowrap">{{ event.time|date:"j M H:i:s" }} UTC</td>
-      <td><code>{{ event.type }}</code></td>
-      <td>{{ event.subject }}</td>
-      <td{% if event.level == "error" %} class="error"{% endif %}>{{ event.message }}</td>
+      <td><code>{{ command.name }}</code></td>
+      <td>{{ command.description }}</td>
+      <td>{% if command.last_run.message %}{{ command.last_run.message }}{% else %}Never{% endif %}</td>
+      {% if may_operate %}<td><a href="{% url 'site-command' site.owner.get_username site.name command.name %}">Run</a></td>{% endif %}
     </tr>
     {% endfor %}
   </tbody>
 </table>
 </div>
 {% else %}
-<p class="empty">The site's daemon has recorded no events.</p>
+<p class="empty">Release {{ live.current_release }} declares no commands.</p>
+{% endif %}
+
+{% if runs %}
+<h3>Recent runs</h3>
+<div class="scroll">
+<table>
+  <thead>
+    <tr><th>Run</th><th>Command</th><th>Release</th><th>Started</th><th>State</th></tr>
+  </thead>
+  <tbody>
+    {% for run in runs %}
+    <tr>
+      <td><a href="{% url 'site-run' site.owner.get_username site.name run.id %}">{{ run.id }}</a></td>
+      <td><code>{{ run.name }}</code>{% if run.inputs %} <span class="muted small">{{ run.inputs }}</span>{% endif %}</td>
+      <td>{{ run.release }}</td>
+      <td class="nowrap">{{ run.started|date:"j M H:i:s" }} UTC</td>
+      <td{% if not run.under_way and not run.ok %} class="error"{% endif %}>{% if run.under_way %}<span class="state state-warning">Under way</span>{% else %}{{ run.message }}{% endif %}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
 {% endif %}
 {% endif %}
 

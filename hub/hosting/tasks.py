@@ -33,7 +33,7 @@ def run_deploy(deploy_id: int) -> None:
     deploy = Deploy.objects.select_related("site", "site__owner").get(pk=deploy_id)
     site = deploy.site
 
-    if deploy.state in {Deploy.State.SERVING, Deploy.State.FAILED}:
+    if deploy.state in {Deploy.State.SERVING, Deploy.State.HELD, Deploy.State.FAILED}:
         return
 
     # The job joins the trace that asked for the deploy, so the request, the
@@ -50,7 +50,7 @@ def run_deploy(deploy_id: int) -> None:
         except (DeployFailed, HelperError) as error:
             _finish(deploy, Deploy.State.FAILED, str(error))
         else:
-            _finish(deploy, Deploy.State.SERVING, "")
+            _finish(deploy, Deploy.State.HELD if deploy.hold else Deploy.State.SERVING, "")
 
 
 def _deploy(deploy: Deploy, helper: HelperClient) -> None:
@@ -86,7 +86,7 @@ def _deploy(deploy: Deploy, helper: HelperClient) -> None:
 
     if not deploy.release:
         with wrapture.block("deploy:plan"):
-            plan = helper.plan_deploy(deploy.source_path, deploy.env)
+            plan = helper.plan_deploy(deploy.source_path, deploy.env, deploy.hold)
 
             if plan.refusals:
                 raise DeployFailed("; ".join(plan.refusals))
@@ -95,7 +95,7 @@ def _deploy(deploy: Deploy, helper: HelperClient) -> None:
 
     with wrapture.block("deploy:release"):
         if helper.release(deploy.release) is None:
-            helper.deploy(deploy.source_path, deploy.env, deploy.release)
+            helper.deploy(deploy.source_path, deploy.env, deploy.release, deploy.hold)
 
     with wrapture.block("deploy:wait"):
         release = helper.wait_release(deploy.release, RELEASE_TIMEOUT)
@@ -131,7 +131,7 @@ def _finish(deploy: Deploy, state: Deploy.State, message: str) -> None:
 
     site = deploy.site
 
-    if site.state != Site.State.CREATING:
+    if site.state != Site.State.CREATING or state == Deploy.State.HELD:
         return
 
     if state == Deploy.State.SERVING:

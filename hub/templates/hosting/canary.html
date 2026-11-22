@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Canary of {{ release }} · {{ site.slug }}{% endblock %}
+{% block content %}
+<p class="crumbs"><a href="{% url 'home' %}">Sites</a> / <a href="{% url 'site' site.owner.get_username site.name %}">{{ site.slug }}</a> /</p>
+<h1>Start a canary of release {{ release }}</h1>
+<p>The release takes a share of the site's requests, step by step. At each step it is judged against the release that serves now: it is rolled back if it does worse, and takes all the traffic when the last step passes.</p>
+<form method="post" class="card narrow-form">
+  {% csrf_token %}
+  <label for="steps">Steps, as rising percentages</label>
+  <input type="text" id="steps" name="steps" value="{{ form.steps }}" required inputmode="numeric" autocomplete="off" aria-describedby="steps-help">
+  <p id="steps-help" class="muted small">For example 10,50: a tenth of requests, then half, then all of them.</p>
+  <label for="hold">Seconds each step lasts before it is judged</label>
+  <input type="text" id="hold" name="hold" value="{{ form.hold }}" required inputmode="numeric" autocomplete="off">
+  <label for="min_requests">Requests the release must serve in a step before it is judged</label>
+  <input type="text" id="min_requests" name="min_requests" value="{{ form.min_requests }}" required inputmode="numeric" autocomplete="off" aria-describedby="requests-help">
+  <p id="requests-help" class="muted small">A step with fewer requests than this waits for more. A quiet site's canary can be promoted by hand from the site's page.</p>
+  <button type="submit">Start the canary</button>
+</form>
+{% endblock %}
