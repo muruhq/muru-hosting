@@ -196,6 +196,120 @@ class HelperClient:
 
         return list(response.releases)
 
+    @observed(label="helper.app", category="external", capture="none")
+    def app(self) -> admin_pb2.App | None:
+        """Return the site's application as the daemon has it, or None before its first release."""
+
+        try:
+            found: admin_pb2.App = self._admin.GetApp(
+                admin_pb2.GetAppRequest(name=APP), metadata=self._metadata, timeout=TIMEOUT
+            )
+        except grpc.RpcError as error:
+            if error.code() == grpc.StatusCode.NOT_FOUND:
+                return None
+
+            raise HelperError("reading the site's application", error) from error
+
+        return found
+
+    @observed(label="helper.rollback", category="external", capture="none")
+    def rollback(self) -> admin_pb2.Release:
+        """Move traffic back to the release that served before, and return it."""
+
+        try:
+            restored: admin_pb2.Release = self._admin.Rollback(
+                admin_pb2.RollbackRequest(app=APP), metadata=self._metadata, timeout=TIMEOUT
+            )
+        except grpc.RpcError as error:
+            raise HelperError("rolling back", error) from error
+
+        return restored
+
+    @observed(label="helper.promote", category="external", capture="none")
+    def promote(self, release: str) -> admin_pb2.Release:
+        """Move traffic to a release now, and return it."""
+
+        try:
+            promoted: admin_pb2.Release = self._admin.PromoteRelease(
+                admin_pb2.PromoteReleaseRequest(app=APP, release=release),
+                metadata=self._metadata,
+                timeout=TIMEOUT,
+            )
+        except grpc.RpcError as error:
+            raise HelperError("promoting the release", error) from error
+
+        return promoted
+
+    @observed(label="helper.restart_worker", category="external", capture="none")
+    def restart_worker(self, release: str, group: str, index: int) -> admin_pb2.WorkerDebug:
+        """Replace one worker of a release with a fresh one, and return what it answered.
+
+        The call returns once the replacement is started, before it serves.
+        """
+
+        try:
+            response = self._admin.Debug(
+                admin_pb2.DebugRequest(
+                    app=APP, release=release, op="restart", group=group, worker=index
+                ),
+                metadata=self._metadata,
+                timeout=TIMEOUT,
+            )
+        except grpc.RpcError as error:
+            raise HelperError("restarting a worker", error) from error
+
+        answer: admin_pb2.WorkerDebug = response.workers[0]
+
+        return answer
+
+    @observed(label="helper.set_maintenance", category="external", capture="none")
+    def set_maintenance(self, on: bool) -> admin_pb2.MaintenanceStatus:
+        """Turn the site's maintenance page on or off."""
+
+        try:
+            status: admin_pb2.MaintenanceStatus = self._admin.SetMaintenance(
+                admin_pb2.SetMaintenanceRequest(app=APP, on=on),
+                metadata=self._metadata,
+                timeout=TIMEOUT,
+            )
+        except grpc.RpcError as error:
+            raise HelperError("setting maintenance", error) from error
+
+        return status
+
+    @observed(label="helper.events", category="external", capture="none")
+    def events(self, newest: int) -> list[admin_pb2.Event]:
+        """Return the daemon's most recent events, newest first.
+
+        The call lists events from the oldest kept and cannot be asked for
+        the newest alone, so every kept event is read to return the last few
+        (muruhq/muru#870; #38 here).
+        """
+
+        try:
+            response = self._admin.ListEvents(
+                admin_pb2.ListEventsRequest(), metadata=self._metadata, timeout=TIMEOUT
+            )
+        except grpc.RpcError as error:
+            raise HelperError("listing the site's events", error) from error
+
+        return list(response.events)[-newest:][::-1]
+
+    @observed(label="helper.log", category="external", capture="none")
+    def log(self, lines: int) -> list[str]:
+        """Return the last lines of the serving release's log, oldest first."""
+
+        try:
+            tail = self._admin.TailLogs(
+                admin_pb2.TailLogsRequest(app=APP, lines=lines),
+                metadata=self._metadata,
+                timeout=TIMEOUT,
+            )
+
+            return [entry.line for entry in tail]
+        except grpc.RpcError as error:
+            raise HelperError("reading the site's log", error) from error
+
     def _deploy_request(self, source_path: str, env: dict[str, str]) -> admin_pb2.DeployRequest:
         # Each release takes its settings from its own source and from the
         # hub alone. Without `fresh`, Muru fills what they leave out from

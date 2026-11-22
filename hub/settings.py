@@ -68,6 +68,11 @@ if HUB_SIGN_IN not in {SIGN_IN_GITHUB, SIGN_IN_LOCAL}:
 
 HUB_ADMIN_SITE = HUB_SIGN_IN == SIGN_IN_LOCAL
 
+# A page may deploy a directory of the hub's own machine only on a
+# developer's machine, which local sign-in stands for (section 15.3).
+
+HUB_DEPLOY_FROM_DISK = HUB_SIGN_IN == SIGN_IN_LOCAL
+
 INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",

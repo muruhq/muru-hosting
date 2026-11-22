@@ -94,9 +94,9 @@ sequenceDiagram
 | Operation | Through |
 | --- | --- |
 | Roll back | `Rollback` to the retained release |
-| Promote a held release | `PromoteRelease` |
+| Promote a held release, or one kept warm | `PromoteRelease` |
 | Control a canary | `PauseRollout`, `ResumeRollout`, `PromoteRollout`, `AbortRollout` |
-| Restart workers | `Debug` with the `restart` operation, Muru's rolling restart |
+| Restart workers | `Debug` with the `restart` operation, once for each worker of the serving release, the hub waiting for each replacement to be ready before the next, since the admin API has no rolling restart of its own (muruhq/muru#871). The wait is inside the web request for now |
 | Maintenance page | `SetMaintenance` |
 | Declared commands | `ListCommands`, `RunCommand` with `detach`, then `TailCommandRun` streamed to the browser |
 | Logs and events | `TailLogs` and `WatchEvents` streamed; `ListEvents` for history |

@@ -129,6 +129,9 @@ def test_a_registered_site_gets_the_hello_site_and_then_a_deploy_of_a_directory(
     assert "<code>r1</code>" in page
     assert "/sites/alice/blog/" in page
     assert "--accent" in fetch(running_site.url + "static/hello.css")
+    assert '<canvas id="game"' in page
+    assert '<section id="game-section" hidden>' in page
+    assert "switchTraffic" in fetch(running_site.url + "static/hello.js")
 
     # The site's data directory is on the site's own directory.
 

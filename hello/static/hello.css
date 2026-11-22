@@ -7,6 +7,8 @@
   --accent: #2456c9;
   --accent-text: #ffffff;
   --code: #eef1f6;
+  --green: #1a7f37;
+  --warn: #b3261e;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -19,6 +21,8 @@
     --accent: #7fa4ff;
     --accent-text: #10141b;
     --code: #262b35;
+    --green: #6fdd8b;
+    --warn: #ff8a80;
   }
 }
 
@@ -59,6 +63,35 @@ pre {
 }
 
 a { color: var(--accent); }
+
+.logo {
+  padding: 0;
+  background: none;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  cursor: default;
+}
+
+#game {
+  display: block;
+  width: 100%;
+  aspect-ratio: 32 / 15;
+  background: var(--code);
+  border: 1px solid var(--line);
+  border-radius: 0.5rem;
+  touch-action: manipulation;
+}
+
+.logo:focus-visible, .button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.game-bar, #game-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
+.game-bar { margin: 0.75rem 0 0; }
+.game-bar .button { margin-top: 0; border: 0; font: inherit; cursor: pointer; }
+#game-controls[hidden], #game-switch[hidden], #game-start[hidden] { display: none; }
+#game-status { margin: 0.5rem 0 0; color: var(--muted); }
 
 .button {
   display: inline-block;

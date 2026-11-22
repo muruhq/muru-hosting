@@ -72,9 +72,11 @@ archive with the hub's image.
 
 - It carries a small original browser game, a static file served by the
   edge from the release's static directory and opened by clicking the
-  logo several times. The player routes requests arriving at an edge to
+  logo five times. The player routes requests arriving at an edge to
   workers before the queue overflows, and partway through switches
-  traffic from a blue release to a green one without dropping any.
+  traffic from a blue release to a green one without dropping any:
+  switching before the green workers are ready ends the game. It is
+  played with buttons, the keys 1 to 3 and S, or by tapping a worker.
 
 The hello site is release `r1`. The first push from GitHub becomes `r2`
 and the hello release is retained like any other, so a rollback works on

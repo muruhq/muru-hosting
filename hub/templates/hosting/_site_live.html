@@ -1,0 +1,150 @@
+<h1>{{ site.slug }} <span class="state state-{{ site.state }}">{{ site.get_state_display }}</span>{% if live.maintenance %} <span class="state state-warning">Maintenance page on</span>{% endif %}</h1>
+
+{% if site.state_message %}<p class="{% if site.state == 'failed' %}error{% else %}muted{% endif %}">{{ site.state_message }}</p>{% endif %}
+
+<dl class="facts">
+  <dt>Address</dt>
+  <dd>{% if site.url %}<a href="{{ site.url }}">{{ site.url }}</a>{% else %}None{% endif %}</dd>
+  <dt>Runs</dt>
+  <dd>{{ site.get_kind_display }}</dd>
+  <dt>Owner</dt>
+  <dd>{{ site.owner.get_username }}</dd>
+  {% if live.current_release %}
+  <dt>Serving</dt>
+  <dd>Release {{ live.current_release }}</dd>
+  {% endif %}
+  {% if live.muru_version %}
+  <dt>Muru</dt>
+  <dd>{{ live.muru_version }}</dd>
+  {% endif %}
+</dl>
+
+{% if may_operate and not live.error and live.current_release %}
+<div class="actions">
+  <form method="post" action="{% url 'site-roll-back' site.owner.get_username site.name %}"{% if live.previous_release %} data-confirm="Move traffic back to release {{ live.previous_release }}?"{% endif %}>
+    {% csrf_token %}
+    <button type="submit" class="quiet"{% if not live.previous_release %} disabled title="There is no earlier release to go back to"{% endif %}>Roll back{% if live.previous_release %} to {{ live.previous_release }}{% endif %}</button>
+  </form>
+  <form method="post" action="{% url 'site-restart' site.owner.get_username site.name %}" data-confirm="Restart the workers of release {{ live.current_release }}, one at a time?">
+    {% csrf_token %}
+    <button type="submit" class="quiet">Restart workers</button>
+  </form>
+  <form method="post" action="{% url 'site-maintenance' site.owner.get_username site.name %}" data-confirm="{% if live.maintenance %}Turn the maintenance page off, so visitors reach the site again?{% else %}Show visitors the maintenance page in place of the site?{% endif %}">
+    {% csrf_token %}
+    <input type="hidden" name="on" value="{% if live.maintenance %}0{% else %}1{% endif %}">
+    <button type="submit" class="quiet">Turn maintenance {% if live.maintenance %}off{% else %}on{% endif %}</button>
+  </form>
+</div>
+{% endif %}
+
+<h2>Releases</h2>
+{% if live.error %}
+<p class="error" role="alert">The site's daemon could not be asked for its releases: {{ live.error }}</p>
+{% elif releases %}
+<div class="scroll">
+<table>
+  <thead>
+    <tr><th>Release</th><th>State</th><th>Source</th><th>Commit</th><th>Created</th>{% if may_operate %}<th><span class="visually-hidden">Actions</span></th>{% endif %}</tr>
+  </thead>
+  <tbody>
+    {% for release in releases %}
+    <tr>
+      <td>{{ release.id }}{% if release.serving %} <span class="tag">serving</span>{% endif %}</td>
+      <td>{{ release.state }}{% if release.message %}: {{ release.message }}{% endif %}</td>
+      <td>{{ release.deploy.description|default:"Not deployed by the hub" }}</td>
+      <td>{% if release.deploy.commit %}<code>{{ release.deploy.commit|slice:":12" }}</code>{% endif %}</td>
+      <td>{{ release.created|date:"j M Y H:i" }} UTC</td>
+      {% if may_operate %}
+      <td>{% if release.promotable %}
+        <form method="post" action="{% url 'site-promote' site.owner.get_username site.name release.id %}" data-confirm="Move traffic to release {{ release.id }}?">
+          {% csrf_token %}
+          <button type="submit" class="link">Serve this release</button>
+        </form>{% endif %}
+      </td>
+      {% endif %}
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+{% else %}
+<p class="empty">The site has no releases.</p>
+{% endif %}
+
+<h2>Deploys</h2>
+{% if deploys %}
+<div class="scroll" data-busy="{{ busy|yesno:'1,0' }}">
+<table>
+  <thead>
+    <tr><th>When</th><th>Source</th><th>Release</th><th>State</th></tr>
+  </thead>
+  <tbody>
+    {% for deploy in deploys %}
+    <tr>
+      <td>{{ deploy.created_at|date:"j M Y H:i" }} UTC</td>
+      <td>{{ deploy.description }}{% if deploy.commit %} at <code>{{ deploy.commit|slice:":12" }}</code>{% endif %}</td>
+      <td>{{ deploy.release }}</td>
+      <td><span class="state state-{{ deploy.state }}">{{ deploy.get_state_display }}</span>{% if deploy.message %}<br><span class="error">{{ deploy.message }}</span>{% endif %}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+{% else %}
+<p class="empty">The hub has made no deploys to this site.</p>
+{% endif %}
+
+{% if not live.error %}
+<h2>Log</h2>
+{% if log %}
+<pre class="log" tabindex="0" aria-label="The last lines of the serving release's log">{{ log }}</pre>
+{% else %}
+<p class="empty">The serving release has written nothing to its log.</p>
+{% endif %}
+
+<h2>Events</h2>
+{% if events %}
+<div class="scroll">
+<table>
+  <thead>
+    <tr><th>When</th><th>Event</th><th>About</th><th>What happened</th></tr>
+  </thead>
+  <tbody>
+    {% for event in events %}
+    <tr>
+      <td class="nowrap">{{ event.time|date:"j M H:i:s" }} UTC</td>
+      <td><code>{{ event.type }}</code></td>
+      <td>{{ event.subject }}</td>
+      <td{% if event.level == "error" %} class="error"{% endif %}>{{ event.message }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+{% else %}
+<p class="empty">The site's daemon has recorded no events.</p>
+{% endif %}
+{% endif %}
+
+<h2>Activity</h2>
+{% if audit %}
+<div class="scroll">
+<table>
+  <thead>
+    <tr><th>When</th><th>Who</th><th>Action</th><th>Outcome</th></tr>
+  </thead>
+  <tbody>
+    {% for entry in audit %}
+    <tr>
+      <td class="nowrap">{{ entry.created_at|date:"j M Y H:i" }} UTC</td>
+      <td>{% if entry.actor %}{{ entry.actor.get_username }}{% else %}On the hub's machine{% endif %}</td>
+      <td>{{ entry.action }}{% if entry.detail %}: {{ entry.detail }}{% endif %}</td>
+      <td{% if not entry.succeeded %} class="error"{% endif %}>{% if not entry.succeeded %}Failed: {% endif %}{{ entry.message }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+{% else %}
+<p class="empty">Nobody has acted on this site through the hub.</p>
+{% endif %}

@@ -126,3 +126,42 @@ class Deploy(models.Model):
 
     def __str__(self) -> str:
         return f"{self.site.slug} {self.release or self.source_name}"
+
+
+class AuditEntry(models.Model):
+    """One action taken on a site: who took it, what it was and how it ended.
+
+    The hub's record is the only one that names the person, since Muru's
+    events name the helper's user (specification section 5.7). This is the
+    start of that log: which rule admitted the person and the call's full
+    arguments are still to be recorded.
+    """
+
+    class Via(models.TextChoices):
+        """The way an action came."""
+
+        PAGE = "page", "A page"
+        COMMAND = "command", "A management command"
+
+    site = models.ForeignKey(Site, on_delete=models.CASCADE, related_name="audit_entries")
+    actor = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="+",
+        help_text="Who took the action; nobody for one taken on the hub's own machine.",
+    )
+    via = models.CharField(max_length=16, choices=Via.choices)
+    action = models.CharField(max_length=32, help_text="The action, such as roll-back.")
+    detail = models.CharField(max_length=255, blank=True, help_text="What it was taken on.")
+    succeeded = models.BooleanField(default=True)
+    message = models.TextField(blank=True, help_text="What came of it, or why it failed.")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ("-created_at", "-id")
+        verbose_name_plural = "audit entries"
+
+    def __str__(self) -> str:
+        return f"{self.site.slug} {self.action}"

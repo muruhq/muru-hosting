@@ -23,6 +23,17 @@ serve` from an image built with `muructl build --deployment`.
   handoff), which serves it as Server-Sent Events or a WebSocket, so a
   long stream holds no WSGI thread.
 
+- Until those streams are built, a site's page keeps itself current by
+  asking the hub again for the part that changes (its state, releases,
+  deploys, log, events and activity): every two seconds while a deploy
+  is under way and every ten otherwise, and not while the page is hidden
+  or the person is selecting text or has the keyboard in that part. Each
+  refresh is a handful of calls to the site's helper.
+
+- An action is a form posted to a view that takes it through the service
+  layer (section 10.1) and shows the page again with what came of it.
+  Those that change what visitors get ask for confirmation first.
+
 ## 2.2 Data
 
 - **Database:** Postgres in a deployment. The hub serves many people,

@@ -21,6 +21,11 @@
     {% endif %}
   </header>
   <main>
+    {% if messages %}
+    <ul class="messages" role="status">
+      {% for message in messages %}<li class="message message-{{ message.level_tag }}">{{ message }}</li>{% endfor %}
+    </ul>
+    {% endif %}
     {% block content %}{% endblock %}
   </main>
   <footer>A proof of concept that dogfoods <a href="https://github.com/muruhq/muru">Muru</a>. Not a product: host nothing here that matters.</footer>

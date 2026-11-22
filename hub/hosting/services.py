@@ -8,7 +8,9 @@ the same way (section 14.2).
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+import time
+from collections.abc import Callable
+from dataclasses import dataclass, field
 from pathlib import Path
 
 import wrapture
@@ -22,7 +24,7 @@ from hub.accounts.models import User
 from hub.hosting import tasks
 from hub.hosting.archives import Archive, archive_directory
 from hub.hosting.helper import HelperClient, HelperError
-from hub.hosting.models import Deploy, Site
+from hub.hosting.models import AuditEntry, Deploy, Site
 from hub.tracing import observed
 
 
@@ -40,6 +42,17 @@ def sites_visible_to(user: User) -> QuerySet[Site]:
         return sites
 
     return sites.filter(owner=user)
+
+
+def may_operate(user: User, site: Site) -> bool:
+    """Say whether a person may act on a site: deploy to it, roll it back and the rest.
+
+    Until sites have members and viewers of their own (specification section
+    5.4), that is the site's owner and a platform admin, who are also the
+    people who see it.
+    """
+
+    return user.is_platform_admin or site.owner_id == user.pk
 
 
 def find_site(slug: str) -> Site:
@@ -101,21 +114,45 @@ def deploy_hello(site: Site) -> Deploy:
     )
 
 
+@observed(label="sites.redeploy_hello")
+def redeploy_hello(site: Site, actor: User | None = None) -> Deploy:
+    """Deploy the hello site to a site again, as a new release."""
+
+    deploy = deploy_hello(site)
+    _record(site, actor, "deploy", "The hello site", "Queued.")
+
+    return deploy
+
+
 @observed(label="sites.deploy_directory", capture="none")
-def deploy_directory(site: Site, directory: Path) -> Deploy:
-    """Deploy a directory on the hub's machine to a site."""
+def deploy_directory(site: Site, directory: Path, actor: User | None = None) -> Deploy:
+    """Deploy a directory on the hub's machine to a site.
+
+    A person may ask for this only where the hub holds its own accounts, on
+    a developer's machine: anywhere else it would hand them every directory
+    the hub can read.
+    """
+
+    if actor is not None and not settings.HUB_DEPLOY_FROM_DISK:
+        raise ActionRefused("This hub does not deploy directories of its own machine.")
+
+    if not directory.is_absolute():
+        raise ActionRefused("Give the directory as an absolute path.")
 
     if not directory.is_dir():
         raise ActionRefused(f"{directory} is not a directory.")
 
     archive = archive_directory(directory)
 
-    return start_deploy(
+    deploy = start_deploy(
         site,
         archive,
         prefix=archive.commit[:12] or "local",
         description=f"From {directory}",
     )
+    _record(site, actor, "deploy", f"From {directory}", "Queued.")
+
+    return deploy
 
 
 def start_deploy(
@@ -169,6 +206,145 @@ def forget_site(site: Site) -> None:
     site.delete()
 
 
+def _record(
+    site: Site, actor: User | None, action: str, detail: str, message: str, succeeded: bool = True
+) -> None:
+    """Add an action to the audit log."""
+
+    AuditEntry.objects.create(
+        site=site,
+        actor=actor,
+        via=AuditEntry.Via.PAGE if actor is not None else AuditEntry.Via.COMMAND,
+        action=action,
+        detail=detail[:255],
+        message=message,
+        succeeded=succeeded,
+    )
+
+
+def _operate(
+    site: Site,
+    actor: User | None,
+    action: str,
+    detail: str,
+    call: Callable[[HelperClient], str],
+) -> str:
+    """Make one call to a site's daemon for a person, record it, and return what came of it.
+
+    A call the daemon refuses, or a daemon that does not answer, is recorded
+    as a failure and refused with what it said.
+    """
+
+    if not site.helper_address:
+        raise ActionRefused("The site has no helper to ask.")
+
+    try:
+        with HelperClient(site.helper_address, site.helper_token) as helper:
+            message = call(helper)
+    except HelperError as error:
+        _record(site, actor, action, detail, str(error), succeeded=False)
+
+        raise ActionRefused(f"{str(error)[:1].upper()}{str(error)[1:]}.") from error
+
+    _record(site, actor, action, detail, message)
+
+    return message
+
+
+@observed(label="sites.roll_back")
+def roll_back(site: Site, actor: User | None = None) -> str:
+    """Move a site's traffic back to the release that served before."""
+
+    def call(helper: HelperClient) -> str:
+        return f"Traffic is going back to release {helper.rollback().id}."
+
+    return _operate(site, actor, "roll-back", "", call)
+
+
+@observed(label="sites.promote")
+def promote(site: Site, release: str, actor: User | None = None) -> str:
+    """Move a site's traffic to one of its releases."""
+
+    def call(helper: HelperClient) -> str:
+        return f"Traffic is going to release {helper.promote(release).id}."
+
+    return _operate(site, actor, "promote", release, call)
+
+
+# How long a restarted worker's replacement gets to serve before the restart
+# gives up on the rest, and how often it is looked at.
+
+RESTART_WAIT = 60.0
+RESTART_POLL = 0.25
+
+
+@observed(label="sites.restart")
+def restart(site: Site, actor: User | None = None) -> str:
+    """Restart the workers of a site's serving release, one at a time so capacity holds.
+
+    The admin API restarts one worker per call, so the turn-taking is done
+    here: each worker is replaced, and the next waits until that replacement
+    serves (muruhq/muru#871; #39 here).
+    """
+
+    def call(helper: HelperClient) -> str:
+        app = helper.app()
+        release = helper.release(app.current_release) if app and app.current_release else None
+
+        if release is None:
+            return "No release is serving, so there is nothing to restart."
+
+        workers = [(worker.group, worker.index) for worker in release.workers]
+
+        for done, (group, index) in enumerate(workers):
+            answer = helper.restart_worker(release.id, group, index)
+
+            if not answer.ok:
+                return (
+                    f"Restarted {done} of {len(workers)} workers, then one refused: {answer.error}"
+                )
+
+            if not _wait_for_workers(helper, release.id):
+                return (
+                    f"Restarted {done + 1} of {len(workers)} workers; its replacement was "
+                    "not serving in time, so the rest were left as they were."
+                )
+
+        plural = "" if len(workers) == 1 else "s"
+
+        return f"Restarted {len(workers)} worker{plural} of release {release.id}."
+
+    return _operate(site, actor, "restart", "", call)
+
+
+def _wait_for_workers(helper: HelperClient, release: str) -> bool:
+    """Wait until every worker of a release is ready, and say whether they were in time."""
+
+    deadline = time.monotonic() + RESTART_WAIT
+
+    while time.monotonic() < deadline:
+        found = helper.release(release)
+
+        if found is not None and all(worker.state == "ready" for worker in found.workers):
+            return True
+
+        time.sleep(RESTART_POLL)
+
+    return False
+
+
+@observed(label="sites.set_maintenance")
+def set_maintenance(site: Site, on: bool, actor: User | None = None) -> str:
+    """Turn a site's maintenance page on or off."""
+
+    def call(helper: HelperClient) -> str:
+        helper.set_maintenance(on)
+
+        return f"The maintenance page is {'on' if on else 'off'}."
+
+    return _operate(site, actor, "maintenance", "on" if on else "off", call)
+
+
 @dataclass(frozen=True)
 class LiveSite:
     """What a site's daemon says of it now, or why it could not be asked."""
@@ -176,11 +352,22 @@ class LiveSite:
     releases: list[admin_pb2.Release]
     muru_version: str = ""
     error: str = ""
+    current_release: str = ""
+    previous_release: str = ""
+    maintenance: bool = False
+    events: list[admin_pb2.Event] = field(default_factory=list)
+    log: list[str] = field(default_factory=list)
+
+
+# How much of a site's events and log its page shows.
+
+EVENTS_SHOWN = 30
+LOG_LINES_SHOWN = 100
 
 
 @observed(label="sites.live")
 def live_site(site: Site) -> LiveSite:
-    """Ask a site's daemon for its releases, newest first."""
+    """Ask a site's daemon for its releases, newest first, its events and its log."""
 
     if not site.helper_address:
         return LiveSite(releases=[], error="The site has no helper to ask.")
@@ -189,9 +376,20 @@ def live_site(site: Site) -> LiveSite:
         with HelperClient(site.helper_address, site.helper_token) as helper:
             status = helper.status()
             releases = helper.releases()
+            app = helper.app()
+            events = helper.events(EVENTS_SHOWN)
+            log = helper.log(LOG_LINES_SHOWN) if app is not None and app.current_release else []
     except HelperError as error:
         return LiveSite(releases=[], error=str(error))
 
     releases.sort(key=lambda release: release.created_unix_ms, reverse=True)
 
-    return LiveSite(releases=releases, muru_version=status.version)
+    return LiveSite(
+        releases=releases,
+        muru_version=status.version,
+        current_release=app.current_release if app is not None else "",
+        previous_release=app.previous_release if app is not None else "",
+        maintenance=app.maintenance if app is not None else False,
+        events=events,
+        log=log,
+    )

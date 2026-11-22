@@ -102,6 +102,17 @@ once Muru closes the gap.
     the helper has no health service and the hub asks `GetStatus`
     (section 4.4).
 
+14. **`ListEvents` cannot be asked for the newest events**
+    ([muruhq/muru#870](https://github.com/muruhq/muru/issues/870)): it
+    lists from a sequence number forwards, so a site's page reads every
+    kept event to show the last thirty.
+
+15. **A rolling restart is not one call**
+    ([muruhq/muru#871](https://github.com/muruhq/muru/issues/871)).
+    `Debug` with `restart` replaces one worker and returns before the
+    replacement serves; the turns of `muructl restart --all` are taken by
+    `muructl`. The hub takes them itself (section 8.4).
+
 ## 11.3 Needed for stage 1
 
 Beyond muruhq/muru#146 and muruhq/muru#148, stage 1 (section 12) needs of

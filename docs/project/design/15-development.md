@@ -114,7 +114,14 @@ directories on the developer's machine, run as the developer's own user.
   the site's directory, so a site keeps its address across restarts.
 
 - **The jobs worker** carries out the deploy, so `just worker` runs
-  beside `just hub` for a new site to get its hello site.
+  beside `just hub` for a new site to get its hello site. `just dev`
+  runs the two together.
+
+- **Deploying a directory from a site's page** is offered only with
+  local sign-in, which stands for a developer's machine: the directory
+  is one of the hub's own machine, so anywhere else it would hand a
+  member every directory the hub can read. `just deploy` does the same
+  from the command line.
 
 - **Deploys** go through the helper's `Sources` service and the admin
   API exactly as in a pod, since the helper and the daemon share the

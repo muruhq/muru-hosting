@@ -270,6 +270,7 @@ the pre-commit hook, and inserts the missing blank lines with `--fix`.
 | `just lint` | ruff, mypy and the repository text checks |
 | `just test` | The hub's tests, on SQLite unless `DATABASE_URL` names Postgres |
 | `just hub ARGS` | Run the hub under Muru at http://127.0.0.1:9080/ with local sign-in, migrating its database first; arguments go to `muructl run`, as in `just hub --open` |
+| `just dev ARGS` | Run the hub and its jobs worker together, which a deploy from a site's page needs; arguments go to `muructl run` |
 | `just worker` | Run the hub's jobs worker beside `just hub` |
 | `just manage ARGS` | A `manage.py` command with the development settings, such as `just manage createsuperuser` |
 | `just site-up OWNER/NAME` | Start a site on this machine (its own Muru daemon and the site helper) and register it with the hub, which deploys the hello site to it once `just worker` runs |

@@ -1,12 +1,9 @@
 """The deploy job and the site page, with a stand-in for the site's helper."""
 
 import subprocess
-from collections.abc import Iterator
 from pathlib import Path
 
-import grpc
 import pytest
-import wrapture
 from django.core.management import CommandError, call_command
 from django.test import Client
 from muruhosting_stubs.muru.admin.v1 import admin_pb2
@@ -16,49 +13,7 @@ from hub.accounts.models import User
 from hub.hosting import archives, services, tasks
 from hub.hosting.helper import HelperClient, HelperError
 from hub.hosting.models import Deploy, Site
-
-
-class Unreachable(grpc.RpcError):
-    """What grpc raises when nothing answers at the helper's address."""
-
-    def code(self) -> grpc.StatusCode:
-        return grpc.StatusCode.UNAVAILABLE
-
-    def details(self) -> str:
-        return "failed to connect to all addresses"
-
-
-@pytest.fixture
-def helper() -> Iterator[HelperClient]:
-    """Stand in for every helper client the hub makes, with a daemon that deploys at once."""
-
-    double = wrapture.mock(HelperClient)
-    double.status.returns(admin_pb2.Status(version="0.1.0-test"))
-    double.apply_config.returns(admin_pb2.ConfigReport(applied=True))
-    double.upload_source.returns("/srv/site/sources/hello")
-    double.plan_deploy.returns(admin_pb2.DeployPlan(release="r1"))
-    double.release.returns(None)
-    double.wait_release.returns(admin_pb2.Release(id="r1", state="ready", serving=True))
-    double.releases.returns([])
-
-    def make(address: str, token: str) -> HelperClient:
-        return double  # type: ignore[no-any-return]
-
-    with (
-        wrapture.binding(tasks, attr="HelperClient").overrides(make),
-        wrapture.binding(services, attr="HelperClient").overrides(make),
-    ):
-        yield double
-
-
-@pytest.fixture
-def site(member: User, helper: HelperClient, django_capture_on_commit_callbacks: object) -> Site:
-    """Register a local site, whose hello deploy has run against the stand-in."""
-
-    with django_capture_on_commit_callbacks(execute=True):  # type: ignore[operator]
-        return services.register_local_site(
-            member, "blog", "127.0.0.1:1", "token", "http://127.0.0.1:2/", "/srv/site"
-        )
+from tests.conftest import Unreachable
 
 
 def test_registering_a_site_deploys_the_hello_site_in_order(site: Site, tape: Tape) -> None:

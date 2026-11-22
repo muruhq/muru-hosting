@@ -74,6 +74,15 @@ Creating and removing sites, quotas and pod-level actions are admin
 operations, except where an owner's entitlements allow it to create or
 remove its own sites.
 
+### 5.4.1 What is checked so far
+
+Sites have no members or viewers yet. A site is seen by its owner and by
+platform admins, and the same people may act on it. The two questions are
+asked separately all the same, by `sites_visible_to` and `may_operate` in
+the service layer: a page answers 404 for a site the person may not see
+and 403 for an action on one they may only look at, and shows no action
+it would refuse.
+
 ## 5.5 The repository rule
 
 A site linked to a repository may say that anyone with write access to
@@ -96,6 +105,15 @@ the Muru call with its arguments (secrets redacted), the way it came (a
 page, the Actions API or MCP, with the client's name) and its outcome.
 The hub's audit log is the only record of the person, since Muru's
 events name the helper's user (section 11.2).
+
+### 5.7.1 What is recorded so far
+
+Each action on a site adds an entry with who took it (nobody, for a
+management command run on the hub's machine), whether it came from a page
+or a command, the action, what it was taken on, whether it succeeded and
+what came of it. A site's page lists its latest entries as its activity.
+Which rule admitted the person and the Muru call with its arguments are
+not recorded yet.
 
 ## 5.8 Local accounts
 
