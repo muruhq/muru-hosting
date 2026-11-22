@@ -55,6 +55,10 @@ site-down site:
 deploy site path:
     {{dev}} uv run python manage.py deploy_site {{site}} {{path}}
 
+# Receive the hub's traces at localhost:4318 and show them at http://localhost:8000/
+viewer:
+    otel-desktop-viewer
+
 # Regenerate the gRPC stubs from the pinned Muru release's admin.proto
 stubs:
     uv run python scripts/generate-stubs.py

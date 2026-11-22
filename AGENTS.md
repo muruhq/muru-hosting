@@ -275,6 +275,7 @@ the pre-commit hook, and inserts the missing blank lines with `--fix`.
 | `just site-up OWNER/NAME` | Start a site on this machine (its own Muru daemon and the site helper) and register it with the hub, which deploys the hello site to it once `just worker` runs |
 | `just site-down OWNER/NAME` | Forget a site on this machine, stop its daemon and helper and remove its directories |
 | `just deploy OWNER/NAME PATH` | Deploy a directory to a site |
+| `just viewer` | Run otel-desktop-viewer, which receives the hub's traces at localhost:4318 and shows them at http://localhost:8000/ |
 | `just stubs` | Regenerate the gRPC stubs from the pinned Muru release's `admin.proto` |
 | `just docs` | Build the documentation from nothing, with warnings as errors |
 | `just docs-serve` | Build the documentation and serve it with live reload |

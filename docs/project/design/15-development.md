@@ -39,8 +39,7 @@ work on the helper and the hub.
 ## 15.2 The hub on a laptop
 
 - The hub runs with `muructl run` from the checkout, and the jobs worker
-  beside it as `manage.py db_worker`, under wrapture's launcher when
-  tracing (section 14.3).
+  beside it as `manage.py db_worker`, untraced for now (section 14.3).
 
 - **SQLite by default.** With no `DATABASE_URL` in the environment, the
   hub uses SQLite in `MURU_DATA_DIR`, which `muructl run` gives every
@@ -121,10 +120,11 @@ directories on the developer's machine, run as the developer's own user.
   API exactly as in a pod, since the helper and the daemon share the
   site directory and the user.
 
-- **Tracing:** the hub, the jobs worker and each helper export to the
-  viewer on the laptop (section 14.4), so one viewer shows a webhook, its
-  job and the helper's calls together, once muruhq/muru#856 gives the
-  helper's RPCs spans.
+- **Tracing:** the hub exports to the viewer on the laptop (section
+  14.4). The jobs worker and the helpers are to export there too, so that
+  one viewer shows a webhook, its job and the helper's calls together,
+  once Muru runs the worker (muruhq/muru#488) and gives the helper's RPCs
+  spans (muruhq/muru#856).
 
 The same arrangement runs on Linux, which lets CI test the helper
 against a real daemon with no cluster: the test suite starts a daemon

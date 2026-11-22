@@ -8,9 +8,10 @@ intended design. See the [specification index](index.md) for how it is
 maintained.
 ```
 
-The hub is traced with [wrapture](https://wrapture.readthedocs.io), through
-Muru's tracing setting where Muru runs it and through wrapture's own
-launcher where it does not, and exports its traces over OTLP. This serves
+The hub's web application is traced with
+[wrapture](https://wrapture.readthedocs.io), through Muru's tracing
+setting, and exports its traces over OTLP. The jobs worker and the site
+helpers are not traced yet (sections 14.3 and 14.5). This serves
 three ends: visibility while the hub is developed, dogfooding wrapture,
 and finding what Muru must add for a trace to run through the edge, the
 helper and the daemon (section 14.5).
@@ -26,9 +27,13 @@ helper and the daemon (section 14.5).
   When the run table takes the key, the setting moves there and the
   committed application settings go back to off.
 
-- In a development run the receiver is Muru's debug toolbar, which the
-  run table turns on: each page's Trace and SQL panels show the
-  request's tree and its queries, with no exporter running.
+- In a development run the first receiver is Muru's debug toolbar, which
+  the run table turns on: each page's Trace, SQL and Outbound panels show
+  the request's tree, its queries and its calls to site helpers, with no
+  exporter running. The same spans are exported to the viewer of section
+  14.4. While no viewer is listening, the exporter logs each batch it
+  could not send; the export cannot be switched off from the environment
+  (GrahamDumpleton/wrapture#7).
 
 - The wrapture configuration is a file of its own, `tracing/wrapture.toml`,
   named by `[tool.muru.tracing] config`:
@@ -76,17 +81,20 @@ The decorator is the hub's own `hub.tracing.observed`, which is
 
 ## 14.3 Tracing the jobs worker
 
-The jobs worker is Django's `db_worker` command from `django-tasks-db`,
-not a Muru entry point, so Muru's tracing does not apply to it. It runs
-under wrapture's launcher instead:
+The jobs worker is not traced yet. It is Django's `db_worker` command
+from `django-tasks-db`, started beside the hub and not by Muru, so Muru's
+tracing setting does not reach it. Two things are wanted first:
 
-```
-python -m wrapture --config tracing/wrapture-jobs.toml manage.py db_worker
-```
+- Muru running it as a long-running process of the application, started
+  and replaced with the release (muruhq/muru#488, with muruhq/muru#490
+  for `muructl run`), and applying the tracing setting to it;
 
-with the same instrumentation and `service_name = "muru-hosting-jobs"`.
+- a way to leave out what the worker does between jobs. It asks the
+  database for work every second, and each of those queries, outside any
+  job, is exported as a trace of its own, which buries the jobs.
 
-A job continues the trace that enqueued it:
+The hub's code is ready for it, since a job continues the trace that
+enqueued it:
 
 - enqueueing records `wrapture.trace_headers()` with the job;
 
@@ -95,8 +103,11 @@ A job continues the trace that enqueued it:
 
 - a job resumed after the worker restarts joins the same trace again.
 
-A deploy then reads as one trace: the webhook's request, the job, its
-calls to GitHub and to the helper, and the steps between.
+Once the worker is traced, a deploy reads as one trace: the request or
+webhook that asked for it, the job, its calls to GitHub and to the
+helper, and the steps between. This was seen to work, with the worker
+applying wrapture's configuration for itself, before being set aside for
+the two reasons above.
 
 ## 14.4 Viewing traces
 
@@ -105,9 +116,11 @@ receives OTLP and shows traces, metrics and logs in a browser, keeping
 them in memory. Nothing is persisted: traces are for visibility during
 development and are lost when the viewer stops.
 
-- **Locally:** the viewer's macOS application, receiving on
-  `localhost:4318`, with `OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318`
-  for `muructl run` and the jobs worker.
+- **Locally:** `just viewer` runs the viewer, installed with Homebrew,
+  receiving on `localhost:4318` and showing traces at
+  `http://localhost:8000/`. That address is the exporter's default, so
+  `just hub` needs nothing in its environment to reach it, and
+  `OTEL_EXPORTER_OTLP_ENDPOINT` names another.
 
 - **In Kubernetes:** an optional Deployment in the hub's namespace, one
   replica of the published image at a pinned release tag
@@ -131,10 +144,22 @@ development and are lost when the viewer stops.
 
 A full trace of a deploy runs from the GitHub webhook through the hub and
 the jobs worker to the helper, the daemon and the release it starts.
-Today it stops at the helper. Section 11.1 lists the Muru issues:
+Today it stops at the hub's call to the helper, which is a span of the
+hub's and carries the trace's identity in its metadata. Section 11.1
+lists the Muru issues:
 
 - the helper's RPCs, served by Muru's own gRPC serving, are not traced as
-  requests (muruhq/muru#856);
+  requests (muruhq/muru#856), and wrapture's `grpc` instrumentation covers
+  neither that serving nor `grpc.aio`. The helper is therefore not traced
+  yet. A handler that opens `wrapture.block(..., joins=...)` from the
+  call's metadata does join the hub's trace, which was seen to work, but
+  that is Muru's to do;
+
+- on macOS, a worker of a release that imported `grpc` before forking is
+  killed when it first reads the system's proxy settings, which the OTLP
+  exporter does (muruhq/muru#869). It ended the helper's worker at its
+  first export. The hub is not affected while it imports `grpc` only in
+  its workers, at the first request that needs it;
 
 - the daemon's work for an admin call is in no trace (muruhq/muru#857);
 

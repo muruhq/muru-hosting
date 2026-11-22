@@ -26,6 +26,8 @@ Muru closes it.
 | [muruhq/muru#133](https://github.com/muruhq/muru/issues/133) | ACME certificates in the edge | custom domains with TLS in the pod (section 9.2) |
 | [muruhq/muru#856](https://github.com/muruhq/muru/issues/856) | gRPC entry points traced, joining the caller's trace | the helper's RPCs in the hub's traces (section 14.5) |
 | [muruhq/muru#857](https://github.com/muruhq/muru/issues/857) | admin API calls joining the caller's trace, with the controller's work as spans | a deploy's trace through the daemon (section 14.5) |
+| [muruhq/muru#488](https://github.com/muruhq/muru/issues/488), [muruhq/muru#490](https://github.com/muruhq/muru/issues/490) | application services: a project's long-running processes, run with its release, and under `muructl run` | the jobs worker run and traced by Muru (section 14.3) |
+| [muruhq/muru#869](https://github.com/muruhq/muru/issues/869) | on macOS, a worker surviving its first proxy lookup when the host imported `grpc` | a traced helper on a laptop (section 14.5) |
 | [muruhq/muru#639](https://github.com/muruhq/muru/issues/639) | the edge forwarding W3C trace context | a page's trace starting at the edge |
 | [muruhq/muru#135](https://github.com/muruhq/muru/issues/135) | edge spans, deploys and rollouts exported over OTLP | the edge's and the controller's time in a trace |
 | [muruhq/muru#136](https://github.com/muruhq/muru/issues/136), [muruhq/muru#137](https://github.com/muruhq/muru/issues/137) | Muru's metrics and events over OTLP | metrics and events beside the traces, and for hosted sites (section 14.6) |

@@ -1,7 +1,7 @@
 # What wrapture records of the hub's web application (specification section
 # 14.1). `[tool.muru.tracing]` in pyproject.toml names this file. A
 # development run shows each request's tree and queries in the debug
-# toolbar, which needs no sink here.
+# toolbar, and the same spans are exported over OTLP.
 
 [[instrument]]
 name = "django"
@@ -9,3 +9,21 @@ name = "django"
 [[instrument]]
 name = "sqlite3"
 statement = true
+
+[[instrument]]
+name = "psycopg"
+
+# The hub only calls gRPC services: the site helpers. Each call is a span
+# of the request that made it, and carries the trace's identity for a helper
+# that is traced to join. Helpers are not traced yet.
+
+[[instrument]]
+name = "grpc"
+server = false
+
+# The endpoint is the environment's to say, with OTEL_EXPORTER_OTLP_ENDPOINT,
+# and is the viewer on this machine without it.
+
+[otel]
+service_name = "muru-hosting-hub"
+signals = ["traces"]
