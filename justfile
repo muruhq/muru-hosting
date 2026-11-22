@@ -19,7 +19,7 @@ lint:
     uv run ruff check
     uv run mypy
     sh scripts/check-no-em-dashes.sh
-    git ls-files '*.py' | xargs uv run python scripts/check-layout.py
+    git ls-files '*.py' ':!packages/stubs/src' | xargs uv run python scripts/check-layout.py
     uv run python scripts/check-user-docs.py
 
 # The hub's tests, on SQLite unless DATABASE_URL names Postgres
@@ -41,6 +41,23 @@ worker:
 # Apply the hub's database migrations to the development database
 migrate:
     {{dev}} uv run python manage.py migrate --noinput
+
+# Start a site on this machine (its own Muru daemon and the site helper) and register it with the hub, as OWNER/NAME
+site-up site:
+    {{dev}} uv run python manage.py register_site $(uv run python scripts/local-site.py up {{site}})
+
+# Forget a site on this machine, stop its daemon and helper and remove its directories
+site-down site:
+    -{{dev}} uv run python manage.py forget_site {{site}}
+    uv run python scripts/local-site.py down {{site}}
+
+# Deploy a directory to a site, as OWNER/NAME PATH
+deploy site path:
+    {{dev}} uv run python manage.py deploy_site {{site}} {{path}}
+
+# Regenerate the gRPC stubs from the pinned Muru release's admin.proto
+stubs:
+    uv run python scripts/generate-stubs.py
 
 # A manage.py command with the development settings, such as `just manage createsuperuser`
 manage *args:

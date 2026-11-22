@@ -31,9 +31,13 @@ streams included, and the answer is returned unchanged.
 
 | Kind | Calls |
 | --- | --- |
-| Reading | GetStatus, ListProcesses, ListApps, GetApp, GetAppData, ListReleases, GetRelease, WaitRelease, ListRollouts, GetRollout, GetScaleStatus, ApplicationUrls, ListEvents, WatchEvents, ListHosts, ListRoutes, ListUpstreams, DiffConfig, ExportConfig, TailLogs, ListLogs, GetMetrics, ListWebSockets, ListOverlays, PreviewOverlay, ListCommands, ListCommandRuns, GetCommandRun, TailCommandRun, ListConditions |
-| Changing | PlanDeploy, Deploy, Rollback, DrainRelease, PromoteRelease, PruneReleases, RemoveRelease, StartRollout, PauseRollout, ResumeRollout, PromoteRollout, AbortRollout, SetScale, SetMaintenance, ControlOverlay, ApplyConfig, RunCommand for declared commands only, Debug for status, stacks, tasks and restart only |
-| Refused | Shutdown, UpgradeDaemon, ReloadConfig, RemoveApp, DashboardLogin, cache and log file maintenance, RunCommand with `argv` (one-off code), Debug inspect and memory |
+| Reading | GetStatus, Probe, ListProcesses, ListApps, GetApp, GetAppData, ListReleases, GetRelease, WaitRelease, ListRollouts, GetRollout, GetScaleStatus, ApplicationUrls, ListEvents, WatchEvents, ListHosts, ListRoutes, ListUpstreams, DiffConfig, ExportConfig, TailLogs, ListLogs, GetMetrics, ListWebSockets, ListOverlays, PreviewOverlay, ListCommands, ListCommandRuns, GetCommandRun, TailCommandRun, ListConditions |
+| Changing | PlanDeploy, Deploy, Rollback, DrainRelease, PromoteRelease, PruneReleases, RemoveRelease, StartRollout, PauseRollout, ResumeRollout, PromoteRollout, AbortRollout, SetScale, SetMaintenance, ControlOverlay, ApplyConfig, RunCommand for declared commands only, StopCommandRun, Debug for status, stacks, tasks and restart only |
+| Refused | Shutdown, UpgradeDaemon, ReloadConfig, RemoveApp, DashboardLogin, cache and log file maintenance, the development request records, RunCommand with `argv` (one-off code), Debug inspect and memory, and any call not listed above |
+
+A refused call is answered `PERMISSION_DENIED` with the reason, and never
+reaches the daemon. A call a later Muru release adds is refused until it
+is listed.
 
 ## 4.3 Sources
 
@@ -41,29 +45,44 @@ A service of the helper's own, `muruhosting.site.v1.Sources`, does what
 Muru's admin API cannot today: give a release its code from elsewhere
 (section 11.2).
 
-- `UploadSource` takes a stream of chunks of a tar archive, with its
-  expected SHA-256 and the commit it came from, and unpacks it beneath
-  `/srv/site/sources/` into a directory named for the commit. It refuses
-  absolute paths, `..`, links that lead out of the directory and device
-  files, and answers with the directory's path.
+- `UploadSource` takes a stream: a header with the directory's name, the
+  archive's expected SHA-256 and the commit it came from, then chunks of
+  a tar archive. The archive is checked against the digest before any of
+  it is unpacked, then unpacked beneath `/srv/site/sources/` into the
+  directory named. It refuses absolute paths, `..`, links that lead out
+  of the directory, device files and an archive over the size limit, and
+  answers with the directory's path.
+
+- The hub names the directory for what it holds, the commit or the
+  archive's digest, so uploading the same archive again answers with the
+  directory already there, and a job run again does no harm. Another
+  archive under a name in use is refused.
 
 - `ListSources` lists the directories, and `RemoveSource` removes one,
   so the hub removes a directory once no release uses it.
 
 The service is removed when Muru can take a release's code through its
-own API.
+own API (muruhq/muru#865).
 
 ## 4.4 Health
 
 - `muructl serve`'s own `/livez` and `/readyz` for the helper's process.
 
-- A gRPC health service that reports serving only while the admin socket
-  answers GetStatus, so the hub knows the daemon is up.
+- The hub knows the daemon is up by asking the proxied `GetStatus`,
+  which answers only while the admin socket does. Muru's edge answers
+  the standard gRPC health service for a release itself, serving while
+  the release has workers, and a release cannot add to that answer
+  (muruhq/muru#864), so the helper has no health service of its own.
 
 ## 4.5 Between the hub and the helper
 
 - TLS with a certificate from the cluster's issuer (cert-manager), and
   the token as a bearer credential on every call.
+
+- The helper's own settings are the admin socket's path, the site
+  directory and the token (or a file holding it), from the environment.
+  Where it listens, and TLS, are Muru's: the listener of `muructl serve`
+  in a pod, and `muructl run --port` on a laptop.
 
 - A NetworkPolicy admits the helper's port from the hub's namespace only.
 

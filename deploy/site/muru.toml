@@ -1,0 +1,8 @@
+# The configuration of a site's Muru daemon (specification section 3.2). A
+# site pod's ConfigMap and a site on a laptop are both written from this
+# file, with the values in braces filled in. What concerns the site's
+# application (its data directory, its hosts and routes) is not here: the
+# hub applies it through the admin API when it creates the site.
+
+[[listener]]
+address = "{listen}"

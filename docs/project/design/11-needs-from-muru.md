@@ -37,14 +37,16 @@ Each is filed in Muru's tracker when the work reaches it.
 1. **Deploying from an uploaded archive through the admin API.** `Deploy`
    takes a directory on the node, so a remote caller has no way to give a
    release its code. The helper's `Sources` service stands in (section
-   4.3).
+   4.3). [muruhq/muru#865](https://github.com/muruhq/muru/issues/865).
 
 2. **Release metadata.** `DeployRequest` and `Release` carry no commit,
    branch, author or link, so Muru's own views show only `rN` for a
    release the hub knows came from a commit. The hub keeps them.
+   [muruhq/muru#866](https://github.com/muruhq/muru/issues/866).
 
 3. **The admin socket's path is not given to releases.** The helper is
    told it in its settings.
+   [muruhq/muru#867](https://github.com/muruhq/muru/issues/867).
 
 4. **No idempotency keys on changing calls,** which Muru's own design
    calls for. A hub job that times out on a promote or a rollback cannot
@@ -74,6 +76,26 @@ Each is filed in Muru's tracker when the work reaches it.
    "traced in every development run, and nowhere else"
    ([muruhq/muru#860](https://github.com/muruhq/muru/issues/860)). The
    hub turns tracing on for every mode (section 14.1).
+
+10. **A deploy takes the previous release's static entries when its source
+    has none,** pointing into the previous release's source directory
+    ([muruhq/muru#861](https://github.com/muruhq/muru/issues/861)). The
+    hub deploys every release `fresh` (section 7.1).
+
+11. **The daemon's configuration file accepts an application's table and
+    ignores it,** `data_dir` included
+    ([muruhq/muru#862](https://github.com/muruhq/muru/issues/862)). The
+    hub applies the table with `ApplyConfig` (section 3.2).
+
+12. **A grpcio client on the admin socket is reset unless it sets an
+    authority**
+    ([muruhq/muru#863](https://github.com/muruhq/muru/issues/863)). The
+    helper names one.
+
+13. **A gRPC release cannot add to the health the edge answers for it**
+    ([muruhq/muru#864](https://github.com/muruhq/muru/issues/864)), so
+    the helper has no health service and the hub asks `GetStatus`
+    (section 4.4).
 
 ## 11.3 Needed for stage 1
 

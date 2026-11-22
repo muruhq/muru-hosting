@@ -130,6 +130,12 @@ if DATABASES["default"]["ENGINE"] == "django.db.backends.sqlite3":
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
+# Where the hub itself answers, for links to it from outside, and the hello
+# site's project, which every new site is given (section 7.2).
+
+HUB_URL = os.environ.get("HUB_URL", "http://127.0.0.1:9080")
+HELLO_SITE_DIR = BASE_DIR / "hello"
+
 # Jobs: Django's tasks framework on the database, run by `manage.py
 # db_worker` (section 2.3).
 

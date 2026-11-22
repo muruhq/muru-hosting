@@ -26,7 +26,7 @@ sequenceDiagram
   Jobs->>K: apply namespace, quota, secrets, claims, config, Deployment, Service, Ingress, policy
   Jobs->>K: watch until the pod is ready
   Jobs->>H: health: serving (the admin socket answers)
-  Jobs->>H: ApplyConfig: hosts and routes
+  Jobs->>H: ApplyConfig: the application's data directory, hosts and routes
   Jobs->>H: UploadSource (the hello site's archive)
   H-->>Jobs: /srv/site/sources/hello-VERSION
   Jobs->>H: PlanDeploy, then Deploy, then WaitRelease
@@ -43,6 +43,16 @@ job from its account page.
 The hello site goes through the same upload and deploy path as a commit
 from GitHub (section 8.3), so every new site proves that path before its
 owner first pushes, and a broken pipeline shows at creation.
+
+Every deploy asks Muru for a release that takes nothing from the release
+before it (`fresh`): its settings come from its own source and from the
+hub alone. Otherwise a site's first release of its owner's code would
+inherit the hello site's settings.
+
+The deploy job records how far it has got: the source's directory once
+uploaded, and the release's id, taken from `PlanDeploy`, before the
+release is made. A job run again skips the upload, and does not deploy
+again a release the daemon already has.
 
 ## 7.2 The hello site
 

@@ -21,7 +21,7 @@ jobs:
       - run: uv run ruff check
       - run: uv run mypy
       - run: sh scripts/check-no-em-dashes.sh
-      - run: git ls-files '*.py' | xargs uv run python scripts/check-layout.py
+      - run: git ls-files '*.py' ':!packages/stubs/src' | xargs uv run python scripts/check-layout.py
       - run: uv run python scripts/check-user-docs.py
 
   test:

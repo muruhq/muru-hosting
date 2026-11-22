@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}{{ site.slug }}{% endblock %}
+{% block content %}
+<p class="crumbs"><a href="{% url 'home' %}">Sites</a> /</p>
+<h1>{{ site.slug }} <span class="state state-{{ site.state }}">{{ site.get_state_display }}</span></h1>
+
+{% if site.state_message %}<p class="{% if site.state == 'failed' %}error{% else %}muted{% endif %}">{{ site.state_message }}</p>{% endif %}
+
+<dl class="facts">
+  <dt>Address</dt>
+  <dd>{% if site.url %}<a href="{{ site.url }}">{{ site.url }}</a>{% else %}None{% endif %}</dd>
+  <dt>Runs</dt>
+  <dd>{{ site.get_kind_display }}</dd>
+  <dt>Owner</dt>
+  <dd>{{ site.owner.get_username }}</dd>
+  {% if live.muru_version %}
+  <dt>Muru</dt>
+  <dd>{{ live.muru_version }}</dd>
+  {% endif %}
+</dl>
+
+<h2>Releases</h2>
+{% if live.error %}
+<p class="error" role="alert">The site's daemon could not be asked for its releases: {{ live.error }}</p>
+{% elif releases %}
+<div class="scroll">
+<table>
+  <thead>
+    <tr><th>Release</th><th>State</th><th>Source</th><th>Commit</th><th>Created</th></tr>
+  </thead>
+  <tbody>
+    {% for release in releases %}
+    <tr>
+      <td>{{ release.id }}{% if release.serving %} <span class="tag">serving</span>{% endif %}</td>
+      <td>{{ release.state }}{% if release.message %}: {{ release.message }}{% endif %}</td>
+      <td>{{ release.deploy.description|default:"Not deployed by the hub" }}</td>
+      <td>{% if release.deploy.commit %}<code>{{ release.deploy.commit|slice:":12" }}</code>{% endif %}</td>
+      <td>{{ release.created|date:"j M Y H:i" }} UTC</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+{% else %}
+<p class="empty">The site has no releases.</p>
+{% endif %}
+
+<h2>Deploys</h2>
+{% if deploys %}
+<div class="scroll">
+<table>
+  <thead>
+    <tr><th>When</th><th>Source</th><th>Release</th><th>State</th></tr>
+  </thead>
+  <tbody>
+    {% for deploy in deploys %}
+    <tr>
+      <td>{{ deploy.created_at|date:"j M Y H:i" }} UTC</td>
+      <td>{{ deploy.description }}{% if deploy.commit %} at <code>{{ deploy.commit|slice:":12" }}</code>{% endif %}</td>
+      <td>{{ deploy.release }}</td>
+      <td><span class="state state-{{ deploy.state }}">{{ deploy.get_state_display }}</span>{% if deploy.message %}<br><span class="error">{{ deploy.message }}</span>{% endif %}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+{% else %}
+<p class="empty">The hub has made no deploys to this site.</p>
+{% endif %}
+{% endblock %}

@@ -101,13 +101,21 @@ directories on the developer's machine, run as the developer's own user.
   token in its settings, all of which a pod gives it too. It listens on
   127.0.0.1 without TLS, which is a setting; the token is still required.
 
-- **Starting and registering:** a recipe starts a site's daemon and
-  helper and registers the site with the hub through a management
-  command, which records the helper's address and token on a site of the
-  `local` kind. Another recipe stops them and removes the directories.
-  The hub's job for creating a `local` site starts nothing: it deploys
-  the hello site through the helper, as for any site (section 7.1).
-  Removing one forgets it.
+- **Starting and registering:** `just site-up OWNER/NAME` starts a site's
+  daemon and helper (`scripts/local-site.py`) and registers the site
+  with the hub through `manage.py register_site`, which records the
+  helper's address and token, the site's directory and its address on a
+  site of the `local` kind. `just site-down OWNER/NAME` forgets the site,
+  stops both and removes the directories. The hub's job for creating a
+  `local` site starts nothing: it deploys the hello site through the
+  helper, as for any site (section 7.1). Removing one forgets it.
+
+- **Ports:** the daemon and the helper each take a free port on
+  127.0.0.1 when the site is first started, kept with the helper's pid in
+  the site's directory, so a site keeps its address across restarts.
+
+- **The jobs worker** carries out the deploy, so `just worker` runs
+  beside `just hub` for a new site to get its hello site.
 
 - **Deploys** go through the helper's `Sources` service and the admin
   API exactly as in a pod, since the helper and the daemon share the
@@ -119,7 +127,23 @@ directories on the developer's machine, run as the developer's own user.
   helper's RPCs spans.
 
 The same arrangement runs on Linux, which lets CI test the helper
-against a real daemon with no cluster.
+against a real daemon with no cluster: the test suite starts a daemon
+and the helper under `muructl run`, calls the helper as the hub does,
+and takes a site from registration through the hello site to a deploy of
+a directory.
+
+### 15.3.1 The packages
+
+One uv workspace holds the hub at the root and the packages it shares
+with the helper: `packages/stubs` for the generated gRPC stubs and
+`helper` for the site helper, so one environment runs the hub, the
+helper and the tests. The hello site in `hello/` is not a member: it is a
+project of its own, as a site's code is, with its own `uv.lock`.
+
+The stubs are generated with their modules beneath
+`muruhosting_stubs`, so that `muru.admin.v1` never meets Muru's own
+`muru` package in a worker. The `.proto` file of the pinned release is
+kept beside them, so an upgrade of Muru shows what changed in the API.
 
 ## 15.4 Sites in Kind
 

@@ -3,21 +3,25 @@
 {% block content %}
 <h1>Sites</h1>
 {% if sites %}
+<div class="scroll">
 <table>
   <thead>
-    <tr><th>Site</th><th>Owner</th><th>Runs</th><th>Created</th></tr>
+    <tr><th>Site</th><th>Owner</th><th>State</th><th>Address</th><th>Runs</th><th>Created</th></tr>
   </thead>
   <tbody>
     {% for site in sites %}
     <tr>
-      <td>{{ site.name }}</td>
+      <td><a href="{% url 'site' site.owner.get_username site.name %}">{{ site.name }}</a></td>
       <td>{{ site.owner.get_username }}</td>
+      <td><span class="state state-{{ site.state }}">{{ site.get_state_display }}</span></td>
+      <td>{% if site.url %}<a href="{{ site.url }}">{{ site.url }}</a>{% endif %}</td>
       <td>{{ site.get_kind_display }}</td>
       <td>{{ site.created_at|date:"j M Y" }}</td>
     </tr>
     {% endfor %}
   </tbody>
 </table>
+</div>
 {% else %}
 <p class="empty">{% if user.is_platform_admin %}There are no sites.{% else %}You have no sites.{% endif %}</p>
 {% endif %}

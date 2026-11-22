@@ -51,8 +51,9 @@ for a proof of concept that uses Muru rather than being it.
 - The admin API's Python stubs are generated from the `.proto` files of
   the pinned Muru release, never edited by hand. Muru is in alpha with no
   compatibility promise between releases, so upgrading Muru is a change
-  of its own: bump the pin, regenerate the stubs, fix what breaks and
-  note in the commit what changed.
+  of its own: bump the pin, regenerate the stubs (`just stubs`, then
+  `just skill`), fix what breaks and note in the commit what changed. A
+  test fails while the stubs are not those of the pinned release.
 
 - When the work shows Muru lacks something muru-hosting needs, open an
   issue in [muruhq/muru](https://github.com/muruhq/muru/issues) in the
@@ -117,7 +118,9 @@ for a proof of concept that uses Muru rather than being it.
   the steps of a job or a view. Section 14 of the specification says what
   is traced and how; a new action or job step is traced in the same
   change that adds it. Never put a secret, a token or file contents in a
-  span's data.
+  span's data. Use `hub.tracing.observed` for the decorator, which keeps
+  the function's signature for mypy until GrahamDumpleton/wrapture#6 is
+  fixed.
 
 ## Tests
 
@@ -263,6 +266,10 @@ the pre-commit hook, and inserts the missing blank lines with `--fix`.
 | `just hub ARGS` | Run the hub under Muru at http://127.0.0.1:9080/ with local sign-in, migrating its database first; arguments go to `muructl run`, as in `just hub --open` |
 | `just worker` | Run the hub's jobs worker beside `just hub` |
 | `just manage ARGS` | A `manage.py` command with the development settings, such as `just manage createsuperuser` |
+| `just site-up OWNER/NAME` | Start a site on this machine (its own Muru daemon and the site helper) and register it with the hub, which deploys the hello site to it once `just worker` runs |
+| `just site-down OWNER/NAME` | Forget a site on this machine, stop its daemon and helper and remove its directories |
+| `just deploy OWNER/NAME PATH` | Deploy a directory to a site |
+| `just stubs` | Regenerate the gRPC stubs from the pinned Muru release's `admin.proto` |
 | `just docs` | Build the documentation from nothing, with warnings as errors |
 | `just docs-serve` | Build the documentation and serve it with live reload |
 | `just skill` | Install or update the Muru skill for coding agents from the pinned `muructl` |
@@ -281,7 +288,11 @@ about this project belong in this file, not in that skill.
 | Path | Holds |
 | --- | --- |
 | `hub/` | The hub's Django project: `accounts/` for who signs in, `hosting/` for sites, with `manage.py` and its `[tool.muru]` settings at the root |
-| `tests/` | The hub's tests |
+| `helper/` | The site helper, a gRPC service Muru serves beside each site's daemon: the allowlisted proxy of `muru.admin.v1` and the Sources service |
+| `hello/` | The hello site, the project every new site is given as its first release |
+| `packages/stubs/` | The gRPC stubs the hub and the helper share: `admin.proto` of the pinned Muru release, the helper's own `.proto`, and the code `just stubs` generates from them |
+| `deploy/site/` | The configuration of a site's Muru daemon, for a pod and for a site on a laptop |
+| `tests/` | The tests of the hub and the helper, some against a real daemon |
 | `tracing/` | wrapture's configuration for the hub, used when tracing is on |
 | `docs/` | Sphinx documentation: the design specification and ADRs under `docs/project/`, user documentation beside them |
 | `scripts/` | The repository's checks |

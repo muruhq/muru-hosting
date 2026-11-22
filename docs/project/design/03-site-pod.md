@@ -72,11 +72,17 @@ A ConfigMap holds the daemon's file:
 
 - the shutdown budget;
 
-- the site's application table, with `data_dir = '/srv/site/data'`, so
-  the data directory is on the claim that stage 1 shares.
+The file is written from `deploy/site/muru.toml`, which a site on a laptop
+uses too (section 15.3).
 
-Hosts and routes are applied by the hub with `ApplyConfig` (section 7.1),
-since they change with a site's domains.
+What concerns the site's application is applied by the hub with
+`ApplyConfig` when it creates the site (section 7.1):
+
+- the application's table, with `data_dir = '/srv/site/data'`, so the
+  data directory is on the claim that stage 1 shares. The daemon's own
+  file does not take an application's table (muruhq/muru#862);
+
+- hosts and routes, since they change with a site's domains.
 
 ## 3.3 Volumes
 

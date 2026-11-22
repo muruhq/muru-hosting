@@ -30,7 +30,7 @@ def test_the_home_page_lists_the_sites_through_the_service(
 
     response = client.get("/")
 
-    assert "<td>blog</td>" in response.text
+    assert '<a href="/sites/alice/blog/">blog</a>' in response.text
     tape.where(label="sites.visible_to").assert_once()
 
 

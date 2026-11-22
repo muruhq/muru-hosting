@@ -1,0 +1,36 @@
+# The site helper (specification section 4): a small gRPC service beside a
+# site's Muru daemon, which the hub calls. Muru serves it: `muructl run`
+# for a site on a laptop, `muructl serve` in a site pod.
+
+[project]
+name = "muru-hosting-helper"
+version = "0"   # a proof of concept with no releases
+description = "The site helper of muru-hosting: an allowlisted proxy of muru.admin.v1, and Sources"
+license = "Apache-2.0"
+requires-python = ">=3.15"
+dependencies = [
+    "grpcio>=1.85",
+    "muru-hosting-stubs",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/muruhosting_helper"]
+
+[tool.uv.sources]
+muru-hosting-stubs = { workspace = true }
+
+# The helper's own settings come from the environment (settings.py): the
+# admin socket, the site directory and the token. Where it listens is Muru's
+# to say, with --port for a run and the listener of `muructl serve`.
+
+[tool.muru]
+entrypoint = "muruhosting_helper.service:register"
+interface = "grpc"
+
+[tool.muru.run]
+dashboard = "off"
+reload = false

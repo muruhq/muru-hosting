@@ -1,0 +1,67 @@
+// The site helper's own service (design specification section 4.3). It does
+// what Muru's admin API cannot today: give a release its code from elsewhere.
+// It is removed when Muru can take a release's code through its own API.
+
+syntax = "proto3";
+
+package muruhosting.site.v1;
+
+service Sources {
+  // Unpack a tar archive beneath the site's sources directory, in a
+  // directory named for the source. The first message is the header and
+  // the rest are chunks of the archive, in order.
+  rpc UploadSource(stream UploadSourceRequest) returns (Source);
+
+  // List the source directories.
+  rpc ListSources(ListSourcesRequest) returns (ListSourcesResponse);
+
+  // Remove one source directory.
+  rpc RemoveSource(RemoveSourceRequest) returns (RemoveSourceResponse);
+}
+
+message UploadSourceRequest {
+  oneof part {
+    UploadSourceHeader header = 1;
+    bytes chunk = 2;
+  }
+}
+
+message UploadSourceHeader {
+  // The directory's name beneath sources/, such as the commit's SHA: letters,
+  // digits, dots, hyphens and underscores, and not starting with a dot.
+  string name = 1;
+
+  // The SHA-256 of the whole archive, in hexadecimal. The upload is refused
+  // when what arrived does not match.
+  string sha256 = 2;
+
+  // The commit the archive came from, when it came from one.
+  string commit = 3;
+}
+
+message Source {
+  string name = 1;
+
+  // The directory's path as the daemon reads it, to give to Deploy.
+  string path = 2;
+
+  string commit = 3;
+
+  // The SHA-256 of the archive the directory was unpacked from.
+  string sha256 = 4;
+
+  // When the directory was made, in seconds since the epoch.
+  int64 created_unix = 5;
+}
+
+message ListSourcesRequest {}
+
+message ListSourcesResponse {
+  repeated Source sources = 1;
+}
+
+message RemoveSourceRequest {
+  string name = 1;
+}
+
+message RemoveSourceResponse {}

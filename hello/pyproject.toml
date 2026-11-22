@@ -1,0 +1,18 @@
+# The hello site: what a new site serves until its owner deploys their own
+# code (specification section 7.2). The hub uploads this directory to a new
+# site and deploys it as release r1, by the same path as any other deploy.
+# It has no dependencies, so its environment builds in a moment.
+
+[project]
+name = "hello"
+version = "0"
+description = "The page a new muru-hosting site serves"
+requires-python = ">=3.12"
+dependencies = []
+
+[tool.muru]
+entrypoint = "hello:application"
+
+[[tool.muru.static]]
+path = "/static/"
+dir = "static"

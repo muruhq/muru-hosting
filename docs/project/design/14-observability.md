@@ -67,7 +67,12 @@ configure from outside, so the hub does:
 - the webhook view marks verification, matching and enqueueing as
   `wrapture.block`s.
 
-Data never includes a secret, a token or a source archive's contents.
+Data never includes a secret, a token or a source archive's contents: the
+client for site helpers records no arguments at all.
+
+The decorator is the hub's own `hub.tracing.observed`, which is
+`wrapture.observed` with the function's signature kept for mypy
+(GrahamDumpleton/wrapture#6).
 
 ## 14.3 Tracing the jobs worker
 
@@ -147,3 +152,22 @@ and logs too. That is a later aim, and section 13 holds its questions:
 where a site's telemetry is collected, how it is kept apart from other
 sites', and whether members see it in the hub, through MCP, or in a
 viewer of their own.
+
+## 14.7 Imports
+
+The hub's settings turn on Muru's import report, which records what each
+import cost as the hub loads. `muructl debug imports`, run from the
+checkout while `just hub` serves, prints it, with the modules each worker
+loaded on first use since the fork; the debug toolbar's Timing panel shows
+the same for one request. `unwrapt` is a dependency for it.
+
+`lazy_imports` is on beside it, so that what the report advises can be
+acted on: a module of the hub's own names the imports to defer in its
+`__lazy_modules__`, and an entry of `[tool.unwrapt.lazy_modules]` in
+`pyproject.toml` defers one in a package the hub depends on. The report
+then shows the deferrals in place, and which of them a worker went on to
+load.
+
+The report is wanted for development runs alone, since it adds to every
+load, and is in the application's settings for the same reason tracing
+is: the run table cannot carry it (muruhq/muru#860).
