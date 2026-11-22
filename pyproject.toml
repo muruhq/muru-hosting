@@ -19,7 +19,7 @@ dev = [
     "ruff>=0.9",
     "types-docutils>=0.21",
     # The Muru release the stubs, the MCP server and the skill come from.
-    "muructl==0.1.0a33",
+    "muructl==0.1.0a34",
 ]
 docs = [
     "furo>=2024.8.6",

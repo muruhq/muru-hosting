@@ -615,7 +615,7 @@ docs = [
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "muructl", specifier = "==0.1.0a33" },
+    { name = "muructl", specifier = "==0.1.0a34" },
     { name = "mypy", specifier = ">=1.14" },
     { name = "pre-commit", specifier = ">=4.0" },
     { name = "ruff", specifier = ">=0.9" },
@@ -632,16 +632,16 @@ docs = [
 
 [[package]]
 name = "muructl"
-version = "0.1.0a33"
+version = "0.1.0a34"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/6b/37/94be3a876df22f088b334af60747b7c483b86775c1ab1428c193828cb048/muructl-0.1.0a33.tar.gz", hash = "sha256:3b2b7a5efc3d7cf460342f3ba41c60188aeb3e488362ce511229f46599b7f640", size = 1450163, upload-time = "2026-11-20T11:48:04.347Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/1a/63/7b46b1cc4643f58f1223517dbf0d036650d40f05f735c8fa88f100a9dced/muructl-0.1.0a34.tar.gz", hash = "sha256:209c3cb0df6f3de0db22e80501b42edd2f7e9973e90925b6418ed6c69404e3be", size = 1495835, upload-time = "2026-11-21T23:15:51.176Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/19/89/85dcb25d65135c8e0af1d869b117a6e759e7db94a2ae811eafc33433420d/muructl-0.1.0a33-py3-none-macosx_10_12_x86_64.whl", hash = "sha256:cb70733d724b1d4ec16105122fce9be863cad28c1c43266b539cb5018e88b4b0", size = 19395710, upload-time = "2026-11-20T11:47:50.182Z" },
-    { url = "https://files.pythonhosted.org/packages/17/fc/a91a8aaab8bde3ce25659fba3ac508265a6a211b71d568a0652201e82a5b/muructl-0.1.0a33-py3-none-macosx_11_0_arm64.whl", hash = "sha256:d59416f629012a7f8192144fbb8d4460a63ab40a24c860e39da73f11f9d8c38e", size = 18366568, upload-time = "2026-11-20T11:47:52.456Z" },
-    { url = "https://files.pythonhosted.org/packages/8e/83/232ab6924b1e62f51127394f568d4bf1758dad5ccb201c5ce864df256b33/muructl-0.1.0a33-py3-none-manylinux_2_28_aarch64.whl", hash = "sha256:9d10a63cb577ed0bbe4e2f168bca127f925047b062801ba7173c4229c88f2df6", size = 19414710, upload-time = "2026-11-20T11:47:54.828Z" },
-    { url = "https://files.pythonhosted.org/packages/8d/e7/60eadc67d9c6a5d09de4ed8577c520c76a444a3db3975a0e570847732c53/muructl-0.1.0a33-py3-none-manylinux_2_28_x86_64.whl", hash = "sha256:58432ef4b792f8acd2fa7422ef1e20b42771678be6f439fa3ad50d9330c9e56c", size = 19929948, upload-time = "2026-11-20T11:47:56.823Z" },
-    { url = "https://files.pythonhosted.org/packages/45/c2/2301a1fa11022228ec033084530313c2a31d057490700f88100914b6950f/muructl-0.1.0a33-py3-none-musllinux_1_2_aarch64.whl", hash = "sha256:a3a6525ed40111e5c77b6473ac3d95ceedf3e0cc62aaa204100451c9a9e8177d", size = 19235227, upload-time = "2026-11-20T11:47:58.907Z" },
-    { url = "https://files.pythonhosted.org/packages/96/24/5508eb77d437887f60fd48da430f2707cb3d8107bbcabff3bbf59c9fa12a/muructl-0.1.0a33-py3-none-musllinux_1_2_x86_64.whl", hash = "sha256:62c747627cd5fc9ec0af4b0f9cbecca0697a25525c24549abe90882deeb2679a", size = 20254113, upload-time = "2026-11-20T11:48:01.199Z" },
+    { url = "https://files.pythonhosted.org/packages/e0/e0/54befb448414fa4b295ce5d31b908818630fd9a492d4af95448bddf4874c/muructl-0.1.0a34-py3-none-macosx_10_12_x86_64.whl", hash = "sha256:fd4f7425018f80bd1d3c54745bcf26bfe12fbb3cec4798aaa301e6273863f4c4", size = 19650205, upload-time = "2026-11-21T23:15:33.81Z" },
+    { url = "https://files.pythonhosted.org/packages/5e/ed/44d90830d245f396cb965028225841ca0c7523c616254277f80c027e42d3/muructl-0.1.0a34-py3-none-macosx_11_0_arm64.whl", hash = "sha256:ae55f27ce1a93ed3e932960ebc2692d5fe2b44883bea68ad07eb9940c22dafd8", size = 18623058, upload-time = "2026-11-21T23:15:36.529Z" },
+    { url = "https://files.pythonhosted.org/packages/fd/5c/1ad1a18b014948e9f9cc97d880142c889f12b3ede70469238cb6eefa6a2a/muructl-0.1.0a34-py3-none-manylinux_2_28_aarch64.whl", hash = "sha256:e080c838c86a70b9499ef56d71f40dd555882e34156997fa565371af6b79fdb6", size = 19641572, upload-time = "2026-11-21T23:15:38.867Z" },
+    { url = "https://files.pythonhosted.org/packages/82/a6/10b614809e571d0a41ad5ea577f07d6d75fd8bb5025d3683338f0b620e21/muructl-0.1.0a34-py3-none-manylinux_2_28_x86_64.whl", hash = "sha256:7d81005c71c7f3d25573473af367eba904c551f737da92be7ddfd3a0886dc89d", size = 20206304, upload-time = "2026-11-21T23:15:42.069Z" },
+    { url = "https://files.pythonhosted.org/packages/ce/c2/67b3d8c8e98bfdd8b70e36469ed042965613e41a462fca90cf87beb358a1/muructl-0.1.0a34-py3-none-musllinux_1_2_aarch64.whl", hash = "sha256:09df003031005fe6af5461b4b17dd2e4fdb963c6019a33b3c7702b8f40ead8d6", size = 19488359, upload-time = "2026-11-21T23:15:44.911Z" },
+    { url = "https://files.pythonhosted.org/packages/f1/ff/1d27124122e6f0f7f0838c1fc29b3ca4f4e018318ac34e6eb166fa55238c/muructl-0.1.0a34-py3-none-musllinux_1_2_x86_64.whl", hash = "sha256:0876e37140eb00356b829bc3ba1601cf733892e6b4b8b453cc7f054cad174c3d", size = 20521872, upload-time = "2026-11-21T23:15:47.632Z" },
 ]
 
 [[package]]

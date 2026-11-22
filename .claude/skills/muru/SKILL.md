@@ -2,7 +2,7 @@
 name: muru
 description: Develop, deploy, test and debug this project's Python web application under Muru: releases, traffic, rollouts, events, logs and worker stacks, through the muru MCP tools or muructl --json.
 metadata:
-  muructl-version: "0.1.0-alpha.33"
+  muructl-version: "0.1.0-alpha.34"
   content-hash: "sha256:6616ade1f566d965b5c120bb61478fa75afe64bea9e6828171f55ebbf9954cd6"
 ---
 
