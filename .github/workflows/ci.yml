@@ -1,5 +1,5 @@
-# Lint and documentation on every push and pull request. The lint steps are
-# those of `just lint`, kept in step with the justfile.
+# Lint, tests and documentation on every push and pull request. The lint
+# steps are those of `just lint`, kept in step with the justfile.
 
 name: ci
 
@@ -23,6 +23,42 @@ jobs:
       - run: sh scripts/check-no-em-dashes.sh
       - run: git ls-files '*.py' | xargs uv run python scripts/check-layout.py
       - run: uv run python scripts/check-user-docs.py
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+      - run: uv sync
+      - run: uv run pytest
+
+  # The same tests on Postgres, with those marked as needing it.
+  test-postgres:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: hub
+          POSTGRES_DB: hub
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgres://postgres:hub@127.0.0.1:5432/hub
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+      - run: uv sync
+      - run: uv run pytest
 
   docs:
     runs-on: ubuntu-latest

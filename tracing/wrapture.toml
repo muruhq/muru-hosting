@@ -1,0 +1,11 @@
+# What wrapture records of the hub's web application (specification section
+# 14.1). `[tool.muru.tracing]` in pyproject.toml names this file. A
+# development run shows each request's tree and queries in the debug
+# toolbar, which needs no sink here.
+
+[[instrument]]
+name = "django"
+
+[[instrument]]
+name = "sqlite3"
+statement = true

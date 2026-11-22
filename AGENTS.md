@@ -259,6 +259,10 @@ the pre-commit hook, and inserts the missing blank lines with `--fix`.
 | --- | --- |
 | `just bootstrap` | Create the development environment and install the git hooks |
 | `just lint` | ruff, mypy and the repository text checks |
+| `just test` | The hub's tests, on SQLite unless `DATABASE_URL` names Postgres |
+| `just hub ARGS` | Run the hub under Muru at http://127.0.0.1:9080/ with local sign-in, migrating its database first; arguments go to `muructl run`, as in `just hub --open` |
+| `just worker` | Run the hub's jobs worker beside `just hub` |
+| `just manage ARGS` | A `manage.py` command with the development settings, such as `just manage createsuperuser` |
 | `just docs` | Build the documentation from nothing, with warnings as errors |
 | `just docs-serve` | Build the documentation and serve it with live reload |
 | `just skill` | Install or update the Muru skill for coding agents from the pinned `muructl` |
@@ -276,6 +280,9 @@ about this project belong in this file, not in that skill.
 
 | Path | Holds |
 | --- | --- |
+| `hub/` | The hub's Django project: `accounts/` for who signs in, `hosting/` for sites, with `manage.py` and its `[tool.muru]` settings at the root |
+| `tests/` | The hub's tests |
+| `tracing/` | wrapture's configuration for the hub, used when tracing is on |
 | `docs/` | Sphinx documentation: the design specification and ADRs under `docs/project/`, user documentation beside them |
 | `scripts/` | The repository's checks |
 | `scratch/` | Temporary working files, ignored by git |

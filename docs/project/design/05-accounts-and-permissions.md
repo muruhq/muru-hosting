@@ -132,3 +132,7 @@ accounts of its own instead of GitHub sign-in.
 
 - **It cannot go unnoticed:** with local sign-in, every page's header
   says that the hub uses local accounts.
+
+- **GitHub sign-in without an App** admits nobody: the sign-in page says
+  that the hub has no GitHub App configured, and names the setting for
+  local accounts.

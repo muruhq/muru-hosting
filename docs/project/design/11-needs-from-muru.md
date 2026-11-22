@@ -59,6 +59,22 @@ Each is filed in Muru's tracker when the work reaches it.
    volumes and a non-root daemon. Muru's Kubernetes guide covers `muructl
    serve` alone.
 
+7. **The `.proto` files of a release are not published.** The `muructl`
+   wheel holds only the binary, so a client has to take `admin.proto`
+   from the repository at the release's tag
+   ([muruhq/muru#858](https://github.com/muruhq/muru/issues/858)).
+
+8. **A project's command run on its own ignores the run table's
+   `data_dir`,** so `muructl command run migrate` with no development run
+   up migrates another database than the one the run serves
+   ([muruhq/muru#859](https://github.com/muruhq/muru/issues/859)). The
+   `just migrate` recipe runs `manage.py migrate` itself.
+
+9. **The run table does not take `tracing`,** so a project cannot commit
+   "traced in every development run, and nowhere else"
+   ([muruhq/muru#860](https://github.com/muruhq/muru/issues/860)). The
+   hub turns tracing on for every mode (section 14.1).
+
 ## 11.3 Needed for stage 1
 
 Beyond muruhq/muru#146 and muruhq/muru#148, stage 1 (section 12) needs of

@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}Sign in{% endblock %}
+{% block content %}
+<section class="card narrow">
+  <h1>Sign in</h1>
+  <p class="error" role="alert">This hub is set to sign people in with GitHub, and has no GitHub App configured, so nobody can sign in.</p>
+  <p>To use accounts held by the hub itself, start it with <code>HUB_SIGN_IN=local</code>.</p>
+</section>
+{% endblock %}

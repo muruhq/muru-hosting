@@ -9,8 +9,15 @@ version = "0"   # a proof of concept with no releases
 description = "A proof of concept hosting control plane for Python web sites on Muru"
 readme = "README.md"
 license = "Apache-2.0"
-requires-python = ">=3.13"
-dependencies = []
+requires-python = ">=3.15"
+dependencies = [
+    "dj-database-url>=3.1.2",
+    "django>=6.0",
+    "django-tasks-db>=0.13.0",
+    "psycopg[binary]>=3.3.9",
+    "wrapture>=1.0.0b5",
+    "wrapture-instrumentation>=1.0.0b3",
+]
 
 [dependency-groups]
 dev = [
@@ -20,6 +27,9 @@ dev = [
     "types-docutils>=0.21",
     # The Muru release the stubs, the MCP server and the skill come from.
     "muructl==0.1.0a34",
+    "pytest>=9.2.0",
+    "pytest-django>=4.14.0",
+    "django-stubs>=6.1.2",
 ]
 docs = [
     "furo>=2024.8.6",
@@ -30,13 +40,48 @@ docs = [
     "sphinxcontrib-mermaid>=1.0",
 ]
 
+# How Muru serves the hub (specification sections 2 and 15.2). The settings
+# all come from the environment; the `just` recipes give a development run
+# its own.
+
+[tool.muru]
+entrypoint = "hub.wsgi:application"
+
+# Tracing is wanted for every development run, where the debug toolbar shows
+# each request's tree and queries, and elsewhere only where something
+# receives the traces. The run table cannot say that (muruhq/muru#860), so
+# it is on here, for every mode; move it to [tool.muru.run] when it can.
+
+[tool.muru.tracing]
+config = "tracing/wrapture.toml"
+
+# A development run keeps the hub's data in the checkout, where commands run
+# without Muru (`manage.py`, the jobs worker) find the same database.
+
+# The ports keep clear of Muru's defaults (8080, 8081 and 8443), which a
+# developer's own daemon or another run is likely to hold.
+
+[tool.muru.run]
+port = 9080
+https_port = 9443
+dashboard = "127.0.0.1:9081"
+toolbar = true
+data_dir = ".muru-hosting/hub"
+reload_include = ["**/*.html", "**/*.css"]
+
+[tool.muru.commands.migrate]
+description = "Apply the hub's database migrations"
+run = ["python", "manage.py", "migrate", "--noinput"]
+timeout = "30m"
+exclusive = true
+
 [tool.uv]
 package = false
 default-groups = ["dev", "docs"]
 
 [tool.ruff]
 line-length = 100
-target-version = "py313"
+target-version = "py315"
 extend-exclude = ["scratch", "docs/_build", "*.md"]
 
 [tool.ruff.lint]
@@ -44,6 +89,7 @@ select = ["E", "F", "W", "I", "UP", "B", "D", "ANN", "RUF"]
 ignore = [
     "ANN401",  # Any is sometimes the honest type
     "D105",    # dunder methods implementing standard protocols need no docstring
+    "D106",    # a Django model's Meta says what it is
     "D107",    # __init__ is documented on the class
     "D202",    # the project puts a blank line after a function docstring (AGENTS.md)
     "D203",    # incompatible with D211
@@ -52,12 +98,26 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 "docs/**" = ["D"]
+"**/migrations/*.py" = ["D", "RUF012", "E501"]
+"tests/**" = ["D103"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "pep257"
 
 [tool.mypy]
 strict = true
-python_version = "3.13"
+python_version = "3.15"
 warn_unreachable = true
-files = ["scripts", "docs/_ext"]
+files = ["scripts", "docs/_ext", "hub", "tests", "manage.py"]
+plugins = ["mypy_django_plugin.main"]
+
+[tool.django-stubs]
+django_settings_module = "tests.settings"
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "tests.settings"
+testpaths = ["tests"]
+addopts = "--strict-markers -p wrapture.pytest_plugin"
+markers = [
+    "postgres: the test needs Postgres, and is skipped unless DATABASE_URL names one",
+]

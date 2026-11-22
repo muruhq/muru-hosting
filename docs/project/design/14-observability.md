@@ -17,11 +17,18 @@ helper and the daemon (section 14.5).
 
 ## 14.1 Tracing the hub's web application
 
-- The hub's committed settings have `tracing` off. A developer turns it on
-  for `muructl run` with `tracing` in `muru.local.toml`, and a deployment
-  turns it on with a settings file mounted from a ConfigMap, Muru's way of
-  changing a container's settings without a new image. Tracing is on only
-  where something receives the traces.
+- Tracing is wanted for every development run, and in a deployment only
+  where something receives the traces. Muru's run table cannot yet carry
+  `tracing` (muruhq/muru#860), so the hub's committed settings turn it on
+  for every mode, in `[tool.muru.tracing]`. A deployment that has no
+  receiver turns it off with a settings file mounted from a ConfigMap,
+  Muru's way of changing a container's settings without a new image.
+  When the run table takes the key, the setting moves there and the
+  committed application settings go back to off.
+
+- In a development run the receiver is Muru's debug toolbar, which the
+  run table turns on: each page's Trace and SQL panels show the
+  request's tree and its queries, with no exporter running.
 
 - The wrapture configuration is a file of its own, `tracing/wrapture.toml`,
   named by `[tool.muru.tracing] config`:

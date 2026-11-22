@@ -1,0 +1,28 @@
+{% load static %}<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Sites{% endblock %} · muru-hosting</title>
+  <link rel="stylesheet" href="{% static 'hub/hub.css' %}">
+</head>
+<body>
+  {% if local_sign_in %}
+  <p class="notice" role="note">This hub uses local accounts, for development. People sign in with a username and password held by the hub, not with GitHub.</p>
+  {% endif %}
+  <header class="bar">
+    <a class="brand" href="{% url 'home' %}">muru-hosting</a>
+    {% if user.is_authenticated %}
+    <nav>
+      <span class="who">{{ user.get_username }}{% if user.is_platform_admin %} <span class="tag">platform admin</span>{% endif %}</span>
+      {% if admin_site and user.is_staff %}<a href="{% url 'admin:index' %}">Admin site</a>{% endif %}
+      <form method="post" action="{% url 'sign-out' %}">{% csrf_token %}<button type="submit" class="link">Sign out</button></form>
+    </nav>
+    {% endif %}
+  </header>
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+  <footer>A proof of concept that dogfoods <a href="https://github.com/muruhq/muru">Muru</a>. Not a product: host nothing here that matters.</footer>
+</body>
+</html>

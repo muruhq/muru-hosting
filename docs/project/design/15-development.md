@@ -48,6 +48,17 @@ work on the helper and the hub.
   Postgres, as a deployment does. `django-tasks-db` works on both,
   making its transactions exclusive on SQLite.
 
+- **The data directory is in the checkout.** The hub's run table sets
+  `data_dir` to the ignored `.muru-hosting/hub/`, and the settings fall
+  back to the same directory when `MURU_DATA_DIR` is unset, so
+  `manage.py` and the jobs worker, which do not run under Muru, open the
+  database the run serves.
+
+- **Settings come from the environment:** `HUB_DEBUG`, `HUB_SECRET_KEY`
+  (required unless `HUB_DEBUG` is on), `HUB_ALLOWED_HOSTS`, `HUB_SIGN_IN`
+  and `DATABASE_URL`. The `just` recipes give a development run
+  `HUB_DEBUG=1` and `HUB_SIGN_IN=local`.
+
 - **Code runs on both.** Models and queries use what Django offers on
   both databases. Something only Postgres has is used only with a SQLite
   path beside it, and a test that needs Postgres says so with a marker and
