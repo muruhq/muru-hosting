@@ -1,0 +1,44 @@
+name: Bug report
+description: Something in muru-hosting does not work as designed
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        muru-hosting is a proof of concept for Muru. A problem in Muru itself belongs in Muru's tracker.
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: One or two sentences on what goes wrong.
+    validations:
+      required: true
+  - type: input
+    id: commit
+    attributes:
+      label: muru-hosting commit
+      description: The commit of this repository, from `git rev-parse --short HEAD`.
+    validations:
+      required: true
+  - type: input
+    id: muru
+    attributes:
+      label: Muru version
+      description: Output of `uv run muructl --version`.
+  - type: input
+    id: kubernetes
+    attributes:
+      label: Kubernetes
+      description: The cluster and its version, for example Kind 0.31 with Kubernetes 1.36.
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected and actual behaviour
+    validations:
+      required: true

@@ -1,0 +1,158 @@
+---
+name: muru
+description: Develop, deploy, test and debug this project's Python web application under Muru: releases, traffic, rollouts, events, logs and worker stacks, through the muru MCP tools or muructl --json.
+metadata:
+  muructl-version: "0.1.0-alpha.33"
+  content-hash: "sha256:6616ade1f566d965b5c120bb61478fa75afe64bea9e6828171f55ebbf9954cd6"
+---
+
+# Developing with Muru
+
+Muru serves this project's Python web application (WSGI or ASGI) behind
+its own edge. Use it to run the application the way production runs it,
+deploy each change as a release, test it, and read what Muru saw when
+something fails.
+
+Work through the `muru` MCP tools when they are available. Without them,
+run `muructl` in a shell and add `--json` to any command that reports
+something: it prints the same JSON the tools return, or `{"error": ...}`
+with a non-zero exit status when it fails.
+
+When the machine runs several daemons, each is a named instance. The
+project's `muru.local.toml` may name the one it uses, `instance = "dev"`;
+otherwise pass `--instance NAME` to `muructl`, or start the MCP server
+with it, and the tools reach that instance.
+
+## What the objects are
+
+- **Application**: a name, such as `shop`, with its routes.
+
+- **Release**: one immutable deployment of the application's source with
+  its settings, named `app@release` (`shop@r3`). A release is never
+  changed; a change is a new release.
+
+- **Traffic** goes to one release at a time, the one that serves. A
+  **rollout** splits it between the serving release and a candidate.
+
+- **Desired state** is what the daemon has been told; only its reconciler
+  acts on it. Every tool records what is wanted and returns once the
+  reconciler has acted or failed.
+
+- **Overlay**: a named, temporary change to routes or settings, such as
+  maintenance during a database outage.
+
+## What each operation does to traffic
+
+| Operation | Tool | `muructl` | Traffic |
+| --- | --- | --- | --- |
+| Deploy | `deploy` | `deploy APP SOURCE` | Moves to the new release once every worker is ready; the previous release drains. A release that fails to start never gets traffic |
+| Deploy held | `deploy` with `hold` | `deploy APP SOURCE --hold` | Stays where it is; the new release runs beside it for testing |
+| Promote | `promote` | `rollout bluegreen APP@RELEASE` | Moves to the release now |
+| Roll back | `rollback` | `rollback APP` | Returns to the previous release, which is kept warm for a while after a deploy |
+| Drain | `drain` | `drain APP@RELEASE` | Leaves the release; its workers stop once their requests finish |
+| Canary | `rollout` with `canary` | `rollout canary APP@RELEASE --steps 10,50` | Shifts in steps; each step's gates (error rate, latency, worker faults) promote or roll back on their own |
+| Apply | `apply` | `apply --file muru.daemon.toml` | Whatever the file declares: a new release in it deploys as `deploy` does |
+| Apply held | `apply` with `hold` | `apply --file muru.daemon.toml --hold` | Stays where it is; every release the apply adds runs beside what serves |
+| Plan a deploy | `deploy` with `dry_run` | `deploy APP SOURCE --dry-run` | None; reports the release a deploy would make, each setting with where it would come from, and what would refuse it |
+| Run a command | `run_command` | `command run APP NAME --input K=V` | None; runs a command the release declares (a migration, a data fix, a check) with the release's interpreter and settings |
+
+`deploy` adds one release; `apply` makes a declarative file the whole
+desired state. Use `apply` when the project has a `muru.daemon.toml`, `deploy`
+for a quick release of the working tree. `muructl render APP SOURCE
+--release ID` writes a `muru.daemon.toml` for one release from a source
+directory and `deploy`'s settings, without the daemon.
+
+## The development loop
+
+1. `status` first. If no daemon answers, start one (`muructl up`), unless
+   the MCP server was started with `--up`, which has done it.
+
+2. Deploy the working tree: `deploy` with `app` and `source` set to the
+   project directory, or `apply` with the project's `muru.daemon.toml`. Wait for
+   the result: it is the release, with its `state` (`ready` or `failed`)
+   and a `message` saying why it failed.
+
+3. Run the tests against the daemon's listener, `http://127.0.0.1:8080/`
+   unless `status` lists other listeners.
+
+4. When something fails, find out why before changing code:
+
+   - `events` for what happened in order: the release's state changes,
+     traffic switches, worker crashes and timeout kills, and each
+     request that ran past its deadline.
+
+   - `logs` with the application as `target` for its output: prints,
+     logging and tracebacks. `access` gives the access log, with each
+     request's status, time and the reason Muru answered when it did.
+
+   - `requests` with `list` for the requests in flight now, each with its
+     age, and `debug` with `stacks` for what every worker thread is doing
+     and which request it is serving: the way to see a hung or slow
+     request. `debug` with `status` gives each worker's threads held and
+     memory, a thread held by a request already answered included.
+
+   - `release` for the release's settings as the daemon resolved them.
+
+5. Fix, and deploy again. Each deploy is the next release (`r2`, `r3`, ...).
+   Run the project's declared steps, such as a migration, with
+   `run_command`; `commands` lists them and their inputs.
+
+6. Clean up: `rollback` when a release made things worse, `drain` a
+   release that is no longer needed. `log_files` shows what the logs
+   take and `cache` what the caches do. `truncate_logs`, `prune_logs`,
+   `prune_releases`, `remove_release`, `remove_app`, `prune_cache` and
+   `clear_cache` remove what they name and are refused unless `yes` is
+   true, so ask the developer first; `dry_run` lists what they would take.
+
+## What to check after each operation
+
+- After `deploy`: the release's `state` is `ready` and `serving` is
+  `true` (or `false` with `hold`). On `failed`, read `message`, then
+  `logs` for the traceback of the import that failed.
+
+- After `promote` or `rollback`: `list` with `releases` shows which
+  release serves.
+
+- After a `rollout`: `list` with `rollouts` shows its step, the share of
+  traffic and its state; it ends `promoted` or `rolled_back` with a
+  message naming the gate.
+
+- After `apply`: the report's `errors` are empty and `changes` lists what
+  happened; with `dry_run`, what would.
+
+- After `run_command`: `ok` is true; otherwise `message` says how the
+  command ended, a stop at its timeout included, and `output` holds what
+  it printed, standard error lines marked `stderr:`.
+
+## Things to know
+
+- A release's errors reach the client as pages Muru generates, with a
+  `reason` such as `app_error`, `worker_crashed`, `deadline` or `hard_timeout`;
+  the access log records it.
+
+- The soft and hard timeouts are off by default, so a hung request is
+  not ended: at the request deadline (300 s unless the settings say
+  otherwise) the client gets a 504 with the reason `deadline`, the
+  request goes on in its worker, and `events` records a
+  `request.past_deadline` naming it. Look at `debug` with `stacks` for
+  where it is stuck; `requests` lists only those not yet answered.
+  With a soft or hard timeout set, a request past it is ended (and its
+  worker replaced, for the hard one), and `events` names that too.
+
+- `docs` returns pages of the user guide by name; start with the list it
+  gives without a page.
+
+- A step worth repeating (a migration, loading fixtures, a smoke check)
+  can be declared as a command in the project's `[tool.muru.commands]`
+  table, with its inputs; it can be run from the next release deployed.
+  `docs` with `howto/commands` describes the table. Give a secret input
+  in `secret_inputs` as `STORE/KEY`, never as a value.
+
+- `instances` lists every Muru instance on the machine, daemons and
+  development runs alike, with whether each is running, detached or
+  stale; with `orphans`, also the Muru processes nothing accounts for.
+  Check it before starting a run, and after stopping one, to see what
+  was left running.
+
+- Do not stop, upgrade or reconfigure the daemon unless asked: other
+  applications may share it.

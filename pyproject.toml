@@ -1,0 +1,63 @@
+# Development workspace for muru-hosting, a proof of concept that dogfoods
+# Muru. Nothing here is published. Muru is used from PyPI at the version
+# pinned below, never from its source tree; upgrading it is a change of its
+# own (AGENTS.md, "Working with Muru").
+
+[project]
+name = "muru-hosting"
+version = "0"   # a proof of concept with no releases
+description = "A proof of concept hosting control plane for Python web sites on Muru"
+readme = "README.md"
+license = "Apache-2.0"
+requires-python = ">=3.13"
+dependencies = []
+
+[dependency-groups]
+dev = [
+    "mypy>=1.14",
+    "pre-commit>=4.0",
+    "ruff>=0.9",
+    "types-docutils>=0.21",
+    # The Muru release the stubs, the MCP server and the skill come from.
+    "muructl==0.1.0a33",
+]
+docs = [
+    "furo>=2024.8.6",
+    "myst-parser>=4.0",
+    "sphinx>=8.1",
+    "sphinx-autobuild>=2024.10",
+    "sphinx-copybutton>=0.5",
+    "sphinxcontrib-mermaid>=1.0",
+]
+
+[tool.uv]
+package = false
+default-groups = ["dev", "docs"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+extend-exclude = ["scratch", "docs/_build", "*.md"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "D", "ANN", "RUF"]
+ignore = [
+    "ANN401",  # Any is sometimes the honest type
+    "D105",    # dunder methods implementing standard protocols need no docstring
+    "D107",    # __init__ is documented on the class
+    "D202",    # the project puts a blank line after a function docstring (AGENTS.md)
+    "D203",    # incompatible with D211
+    "D213",    # incompatible with D212
+]
+
+[tool.ruff.lint.per-file-ignores]
+"docs/**" = ["D"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "pep257"
+
+[tool.mypy]
+strict = true
+python_version = "3.13"
+warn_unreachable = true
+files = ["scripts", "docs/_ext"]

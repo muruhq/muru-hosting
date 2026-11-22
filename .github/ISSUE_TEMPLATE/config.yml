@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions and ideas
+    url: https://github.com/muruhq/muru/discussions
+    about: Ask questions and discuss open-ended ideas in Muru's discussions.
+  - name: A problem or requirement in Muru itself
+    url: https://github.com/muruhq/muru/issues/new/choose
+    about: Muru's own bugs and requirements go to Muru's tracker, even when muru-hosting found them.
+  - name: A security problem in Muru
+    url: https://github.com/muruhq/muru/blob/main/SECURITY.md
+    about: Report security problems in Muru as Muru's security policy describes.

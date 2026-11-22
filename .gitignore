@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+dist/
+build/
+
+# Documentation
+/docs/_build/
+
+# Muru's local state for development runs and agents
+/.muru/
+/.muru-hosting/
+/muru.local.toml
+
+# Editors and systems
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# Local tooling and secrets
+/.env
+/.envrc
+/.claude/settings.local.json
+/.claude/worktrees/

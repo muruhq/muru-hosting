@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "muru": {
+      "command": "uv",
+      "args": ["run", "muructl", "mcp", "serve"]
+    }
+  }
+}

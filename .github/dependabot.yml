@@ -1,0 +1,13 @@
+version: 2
+updates:
+  - package-ecosystem: uv
+    directory: /
+    schedule:
+      interval: weekly
+    # Muru is upgraded by hand, since its alpha releases may change the admin API.
+    ignore:
+      - dependency-name: muructl
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly

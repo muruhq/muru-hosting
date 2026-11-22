@@ -1,0 +1,35 @@
+name: Requirement
+description: Describe a problem or requirement for the maintainer to consider
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        A clearly stated requirement is more useful than a patch. A requirement that a hosting service puts on Muru itself may belong in Muru's tracker.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or use case
+      description: What are you trying to do, and what gets in the way?
+    validations:
+      required: true
+  - type: textarea
+    id: requirement
+    attributes:
+      label: Desired behaviour, stated as a requirement
+    validations:
+      required: true
+  - type: textarea
+    id: muru
+    attributes:
+      label: What it needs from Muru
+      description: Muru issues it depends on, or what Muru would have to offer that it does not.
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+  - type: input
+    id: section
+    attributes:
+      label: Related specification section, if known
+      description: For example 10.3 (MCP access).
